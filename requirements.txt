@@ -1,0 +1,5 @@
+# Python 3.11 recommended; install in a virtual environment.
+mediapipe>=0.10.20,<0.11
+opencv-python>=4.8,<5
+numpy>=1.26,<3
+pyautogui>=0.9.54,<1

@@ -1,0 +1,28 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Secrets and local user settings
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+
+# Large assets and privacy-sensitive training data
+models/*.task
+models/*.tflite
+data/**
+!data/.gitkeep
+*.mp4
+*.avi
+*.mov
+
+# OS artifacts
+.DS_Store
+Thumbs.db
