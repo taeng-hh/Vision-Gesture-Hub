@@ -1,14 +1,15 @@
-﻿"""Virtual pointer with motion smoothing and debounced pinch clicks."""
+"""Virtual pointer with motion smoothing and debounced pinch clicks."""
 from math import exp, hypot
 
 import pyautogui
 from core.geometry import normalize_to_roi, pinch_ratio
 from core.swipe import OpenPalmSwipe
+from modes.app_launcher import launch_app
 
 
 class PCController:
     def __init__(self, *, backend=None, pinch_close=0.45, pinch_open=0.55,
-                 drag_threshold=15, switch_timeout=2.5):
+                 drag_threshold=15, switch_timeout=2.5, launcher=None):
         if not 0 < pinch_close < pinch_open:
             raise ValueError("Expected 0 < pinch_close < pinch_open")
         if not 0 < drag_threshold < float("inf"):
@@ -26,6 +27,8 @@ class PCController:
         self._alt_down = False
         self._switch_since = None
         self._swipe = OpenPalmSwipe()
+        self._launcher = launcher if launcher is not None else launch_app
+        self._last_launch = float("-inf")
         self.reset()
 
     def reset(self):
@@ -33,6 +36,10 @@ class PCController:
             self._release_button()
         finally:
             self._finish_switch()
+        self._launch_since = None
+        self._launch_gesture = None
+        self._launch_latched = False
+        self._launch_release_since = None
         self._swipe.reset()
         self._position = None
         self._filtered = None
@@ -127,6 +134,42 @@ class PCController:
                 and now_s - self._switch_since >= self.switch_timeout):
             self.reset()
             return "Window selected"
+        shortcuts = {"Victory": ("chatgpt", "ChatGPT", "V"),
+                     "ILoveYou": ("paint", "Paint", "I-love-you")}
+        shortcut = (shortcuts.get(hand.gesture)
+                    if hand is not None and hand.score >= 0.80 else None)
+        if shortcut:
+            self._release_button()
+            self._finish_switch()
+            app_key, app_name, gesture_name = shortcut
+            self._launch_release_since = None
+            if self._launch_since is None or self._launch_gesture != hand.gesture:
+                self._launch_since = now_s
+            self._launch_gesture = hand.gesture
+            # Reserve this gesture for launching, with no pointer or pinch input.
+            self._swipe.reset()
+            self._position = self._filtered = self._last_update = None
+            self._pinch_since = self._open_since = None
+            self._pinched = self._ready = False
+            if self._launch_latched:
+                return "Release launch gesture to rearm"
+            elapsed = now_s - self._launch_since
+            if elapsed >= 1.0 and now_s - self._last_launch >= 5.0:
+                self._launch_latched = True
+                self._last_launch = now_s
+                try:
+                    opened = self._launcher(app_key)
+                except (OSError, RuntimeError):
+                    return f"Could not open {app_name}; check app installation"
+                return (f"{app_name} opened" if opened else
+                        f"Could not open {app_name}; check app installation")
+            return f"Hold {gesture_name} 1s: {app_name} | {min(elapsed, 1.0):.1f}s"
+        self._launch_since = None
+        self._launch_gesture = None
+        if self._launch_release_since is None:
+            self._launch_release_since = now_s
+        if now_s - self._launch_release_since >= 0.3:
+            self._launch_latched = False
         switched = self._swipe.update(hand, now_s)
         if self._swipe.active or self._alt_down:
             self._release_button()
@@ -154,7 +197,9 @@ class PCController:
             return "Open palm: swipe right to left to switch app"
         ratio = pinch_ratio(hand, finger_tip=12)
         if ratio is None:
+            latch, release = self._launch_latched, self._launch_release_since
             self.reset()
+            self._launch_latched, self._launch_release_since = latch, release
             return "No hand / landmarks"
 
         dt = (1 / 30 if self._last_update is None
