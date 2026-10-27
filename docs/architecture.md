@@ -17,6 +17,10 @@ modes.sign_language  modes.pc_control  modes.presentation
 ```
 
 **Design rules**
+- `IDLE` is the home screen. Point the index fingertip at a mode card for 0.8 seconds to enter.
+- `core/navigation.py` handles dwell selection in normalized camera coordinates; `ui/overlay.py` draws cards, progress, and an internal pointer.
+- In a mode, dwell on `HOME` to return. PC and presentation modes also have an `ENABLE` / `DISABLE` control. Leave the control before selecting again.
+- Navigation controls take priority over mode actions. Entering a mode keeps OS actions off until explicitly enabled.
 - `core/` must not launch programs or send input events.
 - `modes/sign_language.py` must never execute OS actions.
 - `modes/pc_control.py` and `modes/presentation.py` are gated by `actions_enabled`.
