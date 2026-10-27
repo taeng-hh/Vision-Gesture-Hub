@@ -29,7 +29,8 @@ class TestSwipe(unittest.TestCase):
     def test_leftward_swipe_triggers_once(self):
         gate = OpenPalmSwipe()
         self.assertEqual(self.swipe(gate), 1)
-        self.assertEqual(self.swipe(gate, 1.5), 0)
+        # Moving back to the right rearms, even with the palm still open.
+        self.assertEqual(self.swipe(gate, 1.5), 1)
         gate.update(None, 2)
         gate.update(None, 2.3)
         self.assertEqual(self.swipe(gate, 2.4), 1)

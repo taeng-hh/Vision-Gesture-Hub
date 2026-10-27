@@ -104,8 +104,11 @@ def main():
                     presentation.reset()
                     print("OS actions:", "ON" if enabled else "OFF")
     finally:
-        cap.release()
-        cv2.destroyAllWindows()
+        try:
+            pc.reset()
+        finally:
+            cap.release()
+            cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

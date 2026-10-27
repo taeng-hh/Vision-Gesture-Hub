@@ -45,6 +45,9 @@ class OpenPalmSwipe:
         points = [hand.landmarks[i] for i in (0, 5, 9, 13, 17)]
         x = sum(p.x for p in points) / len(points)
         y = sum(p.y for p in points) / len(points)
+        # Returning to the right rearms the next swipe without folding the hand.
+        if not self._armed and x >= 0.65 and now_s - self._last_trigger >= 0.8:
+            self._armed = True
         if not self._armed or now_s - self._last_trigger < 0.8:
             return False
         if self._start is not None:
