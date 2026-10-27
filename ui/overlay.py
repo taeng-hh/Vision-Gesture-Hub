@@ -19,6 +19,9 @@ def draw_overlay(frame, observation, manager, status, navigation=None):
         "E: Enable/disable actions | Q: Quit",
         f"{status}",
     ]
+    if manager.mode == Mode.PC:
+        lines.append("V sign: hold 1s to open ChatGPT (actions ON)")
+        lines.append("Thumb + index + pinky: hold 1s to open Paint")
     for line_no, line in enumerate(lines):
         y = (100 if navigation is not None else 25) + 25 * line_no
         cv2.rectangle(frame, (5, y - 20), (min(width-5, 620), y + 5), (25, 25, 25), -1)

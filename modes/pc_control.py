@@ -4,10 +4,12 @@ from math import exp, hypot
 import pyautogui
 from core.geometry import normalize_to_roi, pinch_ratio
 from core.swipe import OpenPalmSwipe
+from modes.app_launcher import launch_app
 
 
 class PCController:
-    def __init__(self, *, backend=None, pinch_close=0.45, pinch_open=0.55):
+    def __init__(self, *, backend=None, pinch_close=0.45, pinch_open=0.55,
+                 launcher=None):
         if not 0 < pinch_close < pinch_open:
             raise ValueError("Expected 0 < pinch_close < pinch_open")
         self._mouse = backend if backend is not None else pyautogui
@@ -17,9 +19,15 @@ class PCController:
         self.pinch_open = pinch_open
         self._last_click = float("-inf")
         self._swipe = OpenPalmSwipe()
+        self._launcher = launcher if launcher is not None else launch_app
+        self._last_launch = float("-inf")
         self.reset()
 
     def reset(self):
+        self._launch_since = None
+        self._launch_gesture = None
+        self._launch_latched = False
+        self._launch_release_since = None
         self._swipe.reset()
         self._position = None
         self._filtered = None
@@ -30,6 +38,40 @@ class PCController:
         self._ready = False
 
     def update(self, hand, now_s):
+        shortcuts = {"Victory": ("chatgpt", "ChatGPT", "V"),
+                     "ILoveYou": ("paint", "Paint", "I-love-you")}
+        shortcut = (shortcuts.get(hand.gesture)
+                    if hand is not None and hand.score >= 0.80 else None)
+        if shortcut:
+            app_key, app_name, gesture_name = shortcut
+            self._launch_release_since = None
+            if self._launch_since is None or self._launch_gesture != hand.gesture:
+                self._launch_since = now_s
+            self._launch_gesture = hand.gesture
+            # Reserve this gesture for launching, with no pointer or pinch input.
+            self._swipe.reset()
+            self._position = self._filtered = self._last_update = None
+            self._pinch_since = self._open_since = None
+            self._pinched = self._ready = False
+            if self._launch_latched:
+                return "Release launch gesture to rearm"
+            elapsed = now_s - self._launch_since
+            if elapsed >= 1.0 and now_s - self._last_launch >= 5.0:
+                self._launch_latched = True
+                self._last_launch = now_s
+                try:
+                    opened = self._launcher(app_key)
+                except (OSError, RuntimeError):
+                    return f"Could not open {app_name}; check app installation"
+                return (f"{app_name} opened" if opened else
+                        f"Could not open {app_name}; check app installation")
+            return f"Hold {gesture_name} 1s: {app_name} | {min(elapsed, 1.0):.1f}s"
+        self._launch_since = None
+        self._launch_gesture = None
+        if self._launch_release_since is None:
+            self._launch_release_since = now_s
+        if now_s - self._launch_release_since >= 0.3:
+            self._launch_latched = False
         switched = self._swipe.update(hand, now_s)
         if self._swipe.active:
             # Keep pointer and pinch state out of an app-switch gesture.
@@ -46,7 +88,9 @@ class PCController:
             return "Open palm: swipe right to left to switch app"
         ratio = pinch_ratio(hand, finger_tip=12)
         if ratio is None:
+            latch, release = self._launch_latched, self._launch_release_since
             self.reset()
+            self._launch_latched, self._launch_release_since = latch, release
             return "No hand / landmarks"
 
         dt = (1 / 30 if self._last_update is None
