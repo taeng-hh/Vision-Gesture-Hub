@@ -1,7 +1,6 @@
 """Virtual pointer with motion smoothing and debounced pinch clicks."""
 from math import exp, hypot
 
-import pyautogui
 from core.geometry import normalize_to_roi, pinch_ratio
 from core.swipe import OpenPalmSwipe
 from modes.app_launcher import launch_app
@@ -16,7 +15,11 @@ class PCController:
             raise ValueError("Expected a finite drag_threshold > 0")
         if not 0 < switch_timeout < float("inf"):
             raise ValueError("Expected a finite switch_timeout > 0")
-        self._mouse = backend if backend is not None else pyautogui
+        if backend is None:
+            # Unit tests inject a backend and need no display or PyAutoGUI.
+            import pyautogui
+            backend = pyautogui
+        self._mouse = backend
         self._mouse.FAILSAFE = True
         self._screen_w, self._screen_h = self._mouse.size()
         self.pinch_close = pinch_close

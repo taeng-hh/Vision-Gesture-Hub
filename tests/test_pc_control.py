@@ -1,4 +1,6 @@
 import unittest
+import subprocess
+import sys
 from unittest.mock import Mock
 
 from core.types import Hand, Landmark
@@ -15,6 +17,19 @@ def hand(ratio, x=0.5):
 
 
 class TestPCController(unittest.TestCase):
+    def test_import_without_desktop_dependencies(self):
+        # -S disables site-packages, reproducing the dependency-free CI job.
+        result = subprocess.run(
+            [sys.executable, "-B", "-S", "-c",
+             "from unittest.mock import Mock; "
+             "from modes.pc_control import PCController; "
+             "mouse = Mock(); mouse.size.return_value = (1920, 1080); "
+             "PCController(backend=mouse); "
+             "import sys; assert 'pyautogui' not in sys.modules"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_paint_launch_and_gesture_change_restarts_hold(self):
         launcher = Mock(return_value=True)
         pc = PCController(backend=self.mouse, launcher=launcher)
