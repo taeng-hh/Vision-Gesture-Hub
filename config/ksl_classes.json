@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "classes": [
+    {
+      "class_id": "WORD1290",
+      "kind": "word",
+      "text": "감사",
+      "expected_gloss": [
+        "감사"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1201",
+      "kind": "word",
+      "text": "죄송",
+      "expected_gloss": [
+        "죄송"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1589",
+      "kind": "word",
+      "text": "부탁",
+      "expected_gloss": [
+        "부탁"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1157",
+      "kind": "word",
+      "text": "나",
+      "expected_gloss": [
+        "나"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1351",
+      "kind": "word",
+      "text": "너",
+      "expected_gloss": [
+        "너"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1191",
+      "kind": "word",
+      "text": "좋다",
+      "expected_gloss": [
+        "좋다"
+      ],
+      "game_action": null,
+      "review_note": "동일 표제어 다른 ID: WORD0738"
+    },
+    {
+      "class_id": "WORD1278",
+      "kind": "word",
+      "text": "싫다",
+      "expected_gloss": [
+        "싫다"
+      ],
+      "game_action": null,
+      "review_note": "표현자 라벨 불일치; 동일 표제어 다른 ID: WORD1385"
+    },
+    {
+      "class_id": "WORD1096",
+      "kind": "word",
+      "text": "모르다",
+      "expected_gloss": [
+        "모르다"
+      ],
+      "game_action": null,
+      "review_note": "동일 표제어 다른 ID: WORD2485"
+    },
+    {
+      "class_id": "WORD1381",
+      "kind": "word",
+      "text": "괜찮다",
+      "expected_gloss": [
+        "괜찮다"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1204",
+      "kind": "word",
+      "text": "친구",
+      "expected_gloss": [
+        "친구"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD0115",
+      "kind": "word",
+      "text": "커피",
+      "expected_gloss": [
+        "커피"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1534",
+      "kind": "word",
+      "text": "밥",
+      "expected_gloss": [
+        "밥"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD0953",
+      "kind": "word",
+      "text": "배고프다",
+      "expected_gloss": [
+        "배고프다"
+      ],
+      "game_action": null,
+      "review_note": "동일 표제어 다른 ID: WORD1197"
+    },
+    {
+      "class_id": "WORD1169",
+      "kind": "word",
+      "text": "행복",
+      "expected_gloss": [
+        "행복"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD0009",
+      "kind": "word",
+      "text": "슬프다",
+      "expected_gloss": [
+        "슬프다"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD0003",
+      "kind": "word",
+      "text": "수어",
+      "expected_gloss": [
+        "수어"
+      ],
+      "game_action": null,
+      "review_note": "라벨 일치"
+    },
+    {
+      "class_id": "WORD1577",
+      "kind": "word",
+      "text": "시작",
+      "expected_gloss": [
+        "시작"
+      ],
+      "game_action": "start",
+      "review_note": "게임 조작에도 사용 · 원본 표제어 '시작'과 동일"
+    },
+    {
+      "class_id": "WORD1342",
+      "kind": "word",
+      "text": "왼쪽",
+      "expected_gloss": [
+        "왼쪽"
+      ],
+      "game_action": "left",
+      "review_note": "게임 조작에도 사용 · 방향 수어 → 게임 왼쪽 이동"
+    },
+    {
+      "class_id": "WORD1343",
+      "kind": "word",
+      "text": "오른쪽",
+      "expected_gloss": [
+        "오른쪽"
+      ],
+      "game_action": "right",
+      "review_note": "게임 조작에도 사용 · 방향 수어 → 게임 오른쪽 이동"
+    },
+    {
+      "class_id": "WORD2100",
+      "kind": "word",
+      "text": "위",
+      "expected_gloss": [
+        "위"
+      ],
+      "game_action": "jump",
+      "review_note": "게임 매핑: '위' 수어가 '점프'라는 뜻은 아님"
+    },
+    {
+      "class_id": "WORD2577",
+      "kind": "word",
+      "text": "아래",
+      "expected_gloss": [
+        "아래"
+      ],
+      "game_action": "duck",
+      "review_note": "게임 매핑: '아래' 수어가 '숙이다'라는 뜻은 아님"
+    },
+    {
+      "class_id": "WORD1274",
+      "kind": "word",
+      "text": "달리다",
+      "expected_gloss": [
+        "달리다"
+      ],
+      "game_action": "run",
+      "review_note": "게임 내 입력 이벤트로 매핑"
+    },
+    {
+      "class_id": "WORD1135",
+      "kind": "word",
+      "text": "빠르다",
+      "expected_gloss": [
+        "빠르다"
+      ],
+      "game_action": "accelerate",
+      "review_note": "상태 지속/토글 여부는 게임 설계로 결정"
+    },
+    {
+      "class_id": "SEN0354",
+      "kind": "sentence",
+      "text": "안녕하세요.",
+      "expected_gloss": [
+        "안녕하세요"
+      ],
+      "game_action": null,
+      "review_note": "1개 Gloss · 영상 평균 4.05초 · 한국어 출력은 참고용 의역"
+    },
+    {
+      "class_id": "SEN0254",
+      "kind": "sentence",
+      "text": "만나서 반갑습니다.",
+      "expected_gloss": [
+        "만나다",
+        "반갑다"
+      ],
+      "game_action": null,
+      "review_note": "2개 Gloss · 영상 평균 4.85초 · 한국어 출력은 참고용 의역"
+    },
+    {
+      "class_id": "SEN0156",
+      "kind": "sentence",
+      "text": "다시 설명해 주세요.",
+      "expected_gloss": [
+        "설명",
+        "다시"
+      ],
+      "game_action": null,
+      "review_note": "2개 Gloss · 영상 평균 4.76초 · 한국어 출력은 참고용 의역"
+    },
+    {
+      "class_id": "SEN0173",
+      "kind": "sentence",
+      "text": "잠깐 기다려 주세요.",
+      "expected_gloss": [
+        "잠깐",
+        "기다리다"
+      ],
+      "game_action": null,
+      "review_note": "2개 Gloss · 영상 평균 4.58초 · 한국어 출력은 참고용 의역"
+    },
+    {
+      "class_id": "SEN0355",
+      "kind": "sentence",
+      "text": "감사합니다.",
+      "expected_gloss": [
+        "감사합니다"
+      ],
+      "game_action": null,
+      "review_note": "1개 Gloss · 영상 평균 3.84초 · 한국어 출력은 참고용 의역"
+    },
+    {
+      "class_id": "SEN0155",
+      "kind": "sentence",
+      "text": "천천히 설명해 주세요.",
+      "expected_gloss": [
+        "설명",
+        "천천히"
+      ],
+      "game_action": null,
+      "review_note": "2개 Gloss · 영상 평균 5.2초 · 한국어 출력은 참고용 의역"
+    },
+    {
+      "class_id": "SEN0253",
+      "kind": "sentence",
+      "text": "오늘 하루 수고하셨습니다.",
+      "expected_gloss": [
+        "오늘",
+        "하루",
+        "수고"
+      ],
+      "game_action": null,
+      "review_note": "3개 Gloss · 영상 평균 5.79초 · 한국어 출력은 참고용 의역"
+    }
+  ],
+  "note": "Class identity follows supplied workbook. Gloss-to-Korean sentence text is a curated rendering, not free translation."
+}

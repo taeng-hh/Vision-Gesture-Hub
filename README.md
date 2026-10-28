@@ -143,3 +143,20 @@ screenshots (아직 없음) UI/시연 이미지 필요 시 별도 추가
 ### 김진태 10.27 16 수정
 
 pc제어파트 gpt,그림판 키기 구현 (각 손모양 브이, 엄지검지 새끼 핀 손모양)
+
+
+## 23단어·7문장 키포인트 학습
+
+팀 최종 목록은 `config/ksl_classes.json`에 정의되어 있습니다. 키포인트 준비,
+GRU 학습, 촬영 그룹 분리 평가, 예측 이벤트와 영상 담당자용 공통 데이터 계약은
+[학습 안내](docs/ksl_training.md)를 확인하세요.
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-training.txt
+.venv\Scripts\python.exe -m ksl.prepare --source "다운로드 폴더" --output data/ksl30
+```
+
+문장 자료가 없으면 전체 30클래스 학습은 진행되지 않습니다. 단일 촬영 그룹의
+부분 실행 점검은 `--smoke-only --allow-partial`을 명시해야 하며 정확도 평가가 아닙니다.
+학습 모델/데이터는 저장소에 포함하지 않습니다. 기존 웹캠 인식기에 새 GRU를 연결하는
+통합과 실제 영상 추출기는 별도 작업이며, 게임에는 액션 메타데이터만 제공합니다.

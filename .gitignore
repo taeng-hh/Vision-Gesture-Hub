@@ -26,3 +26,9 @@ data/**
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# GRU training bundles (local only)
+models/**/*.pt
+models/**/classes.json
+models/**/metrics.json
+models/**/provenance.json
