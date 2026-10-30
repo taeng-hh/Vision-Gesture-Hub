@@ -9,7 +9,7 @@ class Recognizer:
     def __init__(self,folder,min_score=.75,min_margin=.15):
         import torch
         from .network import SequenceGRU
-        self.torch=torch;folder=Path(folder)
+        self.torch=torch;torch.set_num_threads(2);folder=Path(folder)
         d=torch.load(folder/'model.pt',map_location='cpu',weights_only=True)
         if d['format']!='ksl-gru-v1':raise ValueError('Unsupported model')
         self.classes=json.loads((folder/'classes.json').read_text(encoding='utf-8'))
@@ -25,7 +25,8 @@ class Recognizer:
         return dict(accepted=accepted,class_id=candidate['class_id'] if accepted else None,
                     kind=candidate['kind'] if accepted else None,text=candidate['text'] if accepted else None,
                     game_action=candidate.get('game_action') if accepted else None,
-                    candidate_id=candidate['class_id'],score=score,margin=margin)
+                    candidate_id=candidate['class_id'],score=score,margin=margin,
+                    alternatives=[dict(class_id=self.classes[int(i)]['class_id'],text=self.classes[int(i)]['text'],score=float(scores[i])) for i in scores.argsort(descending=True)[:3]])
 
 
 def main():

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>한국수어 학습 동작 · 골격 보기</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101827;color:#e7edf7;font:16px system-ui,"Malgun Gothic",sans-serif}main{max-width:1100px;margin:auto;padding:24px}h1{font-size:25px;margin:0 0 8px}p{color:#b7c6db;line-height:1.6}section{background:#1b2940;padding:16px;border-radius:14px;margin:16px 0}.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}button,select{background:#304765;color:white;border:1px solid #54708f;border-radius:8px;padding:10px;font:inherit}button{cursor:pointer}label{display:flex;align-items:center;gap:8px}canvas{width:100%;display:block;background:#0b1220;border-radius:12px}input[type=range]{accent-color:#54ddb8}#seek{width:100%}#name{font-size:22px}small{color:#b7c6db}.handpanels{display:grid;grid-template-columns:1fr 1fr;gap:12px}.handpanels canvas{max-height:250px}#progress{font-variant-numeric:tabular-nums}
+</style><main>
+<h1>한국수어 · 학습 동작 따라 보기</h1>
+<p>30개 클래스 모델이 실제 학습한 정면 키포인트입니다. 얼굴 표정·손바닥 방향·깊이는 표현되지 않으므로 정확한 수어 학습에는 원본 영상도 함께 확인하세요.</p>
+<section class="row"><label>동작 <select id="clip"></select></label><button id="prev">이전</button><button id="next">다음</button><span id="name"></span></section>
+<canvas id="stage" width="1000" height="580" aria-label="반복 재생되는 손과 상반신 골격"></canvas>
+<section><div class="row"><button id="play">일시 정지</button><button id="restart">처음부터</button><label>속도 <select id="speed"><option value="0.25">0.25배</option><option value="0.5" selected>0.5배</option><option value="1">1배</option></select></label><label><input id="mirror" type="checkbox" checked>거울처럼 따라 보기</label><span id="progress"></span></div><p><input id="seek" type="range" min="0" value="0" step="1" aria-label="프레임 위치"></p><small>초록: 촬영자의 왼손 · 주황: 촬영자의 오른손 · Space: 재생/정지 · ←/→: 한 프레임 이동</small></section>
+<div class="handpanels"><section><h3>촬영자의 왼손 · 손 모양 확대</h3><canvas id="left" width="450" height="250"></canvas></section><section><h3>촬영자의 오른손 · 손 모양 확대</h3><canvas id="right" width="450" height="250"></canvas></section></div>
+<p>확대 그림은 손목을 중심으로 손 모양을 보여 줍니다. 손의 이동 위치는 위 상반신 그림을 보세요. 손가락이 겹치거나 선이 튀는 부분은 원본 키포인트 추적 오차일 수 있습니다.</p>
+<p>웹캠에서는 Space → 한 동작 수행 → Space로 완료하세요. 이 페이지는 카메라를 사용하지 않고 영상이나 데이터를 전송하지 않습니다.</p>
+</main><script>
+const clips=__CLIPS_JSON__;
+const $=id=>document.getElementById(id), stage=$('stage');
+const edges=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
+const bodyEdges=[[0,1],[1,2],[2,3],[3,4],[1,5],[5,6],[6,7],[2,5]];
+let index=0,frame=0,playing=true,previous=null,bounds;
+clips.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(c.kind==='word'?'단어':'문장')+' · '+c.text+' ('+c.id+')';$('clip').append(o)});
+function getBounds(points){const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);return {x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)}}
+function select(i){index=(i+clips.length)%clips.length;$('clip').value=index;frame=0;previous=null;const c=clips[index];$('seek').max=c.frames.length-1;$('name').textContent=c.text;let pts=[];for(const f of c.frames)for(let j=0;j<50;j++)if(f[j][2]>=.2)pts.push(f[j]);bounds=getBounds(pts);draw()}
+function transform(b,w,h,pad=36){const scale=Math.min((w-pad*2)/Math.max(b.w,1),(h-pad*2)/Math.max(b.h,1));return p=>{let x=(p[0]-b.x-b.w/2)*scale+w/2;return [$('mirror').checked?w-x:x,(p[1]-b.y-b.h/2)*scale+h/2]}}
+function skeleton(ctx,pts,links,color,map,line=3){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=line;for(const [a,b] of links){if(pts[a][2]<.2||pts[b][2]<.2)continue;const p=map(pts[a]),q=map(pts[b]);ctx.beginPath();ctx.moveTo(...p);ctx.lineTo(...q);ctx.stroke()}for(const p of pts){if(p[2]<.2)continue;const xy=map(p);ctx.beginPath();ctx.arc(...xy,3,0,Math.PI*2);ctx.fill()}}
+function handPanel(id,pts,color){const cvs=$(id),ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);const valid=pts.filter(p=>p[2]>=.2);if(!valid.length)return;const wrist=pts[0];const local=pts.map(p=>[p[0]-wrist[0],p[1]-wrist[1],p[2]]);const c=clips[index];let radius=1;for(const f of c.frames){const hand=f.slice(id==='left'?0:21,id==='left'?21:42);for(const p of hand)if(p[2]>=.2&&hand[0][2]>=.2)radius=Math.max(radius,Math.abs(p[0]-hand[0][0]),Math.abs(p[1]-hand[0][1]))}skeleton(ctx,local,edges,color,transform({x:-radius,y:-radius,w:radius*2,h:radius*2},cvs.width,cvs.height,15),3)}
+function draw(){const c=clips[index],i=Math.min(c.frames.length-1,Math.floor(frame)),f=c.frames[i],ctx=stage.getContext('2d');ctx.clearRect(0,0,stage.width,stage.height);const map=transform(bounds,stage.width,stage.height);skeleton(ctx,f.slice(42,50),bodyEdges,'#91a5c2',map,5);skeleton(ctx,f.slice(0,21),edges,'#54ddb8',map);skeleton(ctx,f.slice(21,42),edges,'#ffb16b',map);handPanel('left',f.slice(0,21),'#54ddb8');handPanel('right',f.slice(21,42),'#ffb16b');$('seek').value=i;$('progress').textContent=(i+1)+' / '+c.frames.length+' 프레임 · '+(i/c.fps).toFixed(2)+'초';$('play').textContent=playing?'일시 정지':'재생'}
+function toggle(){playing=!playing;previous=null;draw()}
+$('clip').onchange=()=>select(Number($('clip').value));$('prev').onclick=()=>select(index-1);$('next').onclick=()=>select(index+1);$('play').onclick=toggle;$('restart').onclick=()=>{frame=0;previous=null;draw()};$('mirror').onchange=draw;$('seek').oninput=()=>{frame=Number($('seek').value);playing=false;draw()};
+document.onkeydown=e=>{if(['SELECT','INPUT','BUTTON'].includes(document.activeElement.tagName))return;if(e.code==='Space'){e.preventDefault();toggle()}if(e.code==='ArrowLeft'||e.code==='ArrowRight'){e.preventDefault();playing=false;frame=Math.max(0,Math.min(clips[index].frames.length-1,Math.floor(frame)+(e.code==='ArrowLeft'?-1:1)));draw()}};
+function tick(now){if(previous!==null&&playing){frame=(frame+Math.min(now-previous,100)*clips[index].fps*Number($('speed').value)/1000)%clips[index].frames.length;draw()}previous=now;requestAnimationFrame(tick)}
+select(0);requestAnimationFrame(tick);
+</script></html>

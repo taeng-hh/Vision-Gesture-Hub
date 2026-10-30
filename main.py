@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parent
 
 
 def main():
+    import sys
+    if "--live-ksl" in sys.argv:
+        sys.argv.remove("--live-ksl")
+        from live_ksl import main as run_live_ksl
+        return run_live_ksl()
     parser = argparse.ArgumentParser(description="Vision Gesture Hub starter")
     parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index")
     parser.add_argument("--model", type=Path,

@@ -32,3 +32,12 @@ models/**/*.pt
 models/**/classes.json
 models/**/metrics.json
 models/**/provenance.json
+
+# Local-only trained bundles, dataset archives and embedded skeleton playback data
+models/**
+!models/.gitkeep
+*.zip
+*.tar
+*.zip.part*
+학습동작_골격보기.html
+공유용/
