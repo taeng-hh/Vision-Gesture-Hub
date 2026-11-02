@@ -26,7 +26,7 @@ class TrainingTest(unittest.TestCase):
             (data/'manifest.json').write_text(json.dumps(dict(feature_spec=SPEC,clips=rows)),encoding='utf-8')
             config=root/'classes.json';config.write_text(json.dumps(dict(classes=registry)),encoding='utf-8')
             result=subprocess.run([sys.executable,'-B','-X','utf8','-m','ksl.train','--data',str(data),'--classes',str(config),
-                                   '--validation-group','REAL02','--output',str(root/'model'),'--epochs','2'],capture_output=True,text=True)
+                                   '--validation-group','REAL02','--output',str(root/'model'),'--epochs','2'],capture_output=True,text=True,encoding="utf-8",errors="replace")
             self.assertEqual(result.returncode,0,result.stderr)
             report=json.loads((root/'model/metrics.json').read_text(encoding='utf-8'))
             self.assertEqual(report['train_clips'],2);self.assertEqual(report['validation_clips'],2)
@@ -34,6 +34,25 @@ class TrainingTest(unittest.TestCase):
             event=Recognizer(root/'model',min_score=0,min_margin=0).predict(a)
             self.assertTrue(event['accepted']);self.assertIn(event['class_id'],{'WORD0','WORD1'})
             self.assertEqual(event['kind'],'word')
+
+
+@unittest.skipUnless(importlib.util.find_spec('torch'),'Optional PyTorch dependency not installed')
+class PublishedModelTest(unittest.TestCase):
+    def test_published_weights_load_without_dataset(self):
+        import hashlib
+        from ksl.predict import Recognizer
+        folder=Path(__file__).resolve().parents[1]/'models/ksl30_robust_v2'
+        self.assertEqual(hashlib.sha256((folder/'model.pt').read_bytes()).hexdigest(),'a947122ead740ada68f68c5e0bca881028cd071f1d1cc99afe53aad16decf8b9')
+        model=Recognizer(folder)
+        self.assertEqual(len(model.classes),30)
+        self.assertEqual(sum(c['kind']=='word' for c in model.classes),23)
+        a=np.ones((8,67,3),dtype=np.float32);a[:,:,:2]=0
+        a[:,47,0]=2
+        for offset in (0,21):
+            for j in range(21):a[:,offset+j,:2]=[j*.1,(j%4)*.1]
+        event=model.predict(a)
+        self.assertTrue(np.isfinite(event['score']))
+        self.assertIn(event['candidate_id'],{c['class_id'] for c in model.classes})
 
 
 if __name__=='__main__':unittest.main()
