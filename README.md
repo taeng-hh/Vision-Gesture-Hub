@@ -4,7 +4,7 @@
 
 웹캠 입력을 공통 인식 파이프라인에서 처리하고, **수어 인식 모드**, **PC 제어 모드**, **발표 제어 모드**로 분리한 GitHub 초기 프로젝트입니다.
 
-> **한국수어 30클래스 웹캠 인식**: 단어 23개·문장 7개를 구간 단위로 인식하고 단어를 규칙으로 조합합니다. `main.py --live-ksl`로 실행합니다. **[팀원용 설치·자료 배치·실행 안내](docs/ksl_team_guide.md)** — 데이터와 학습 모델은 별도로 전달하며 저장소에는 포함하지 않습니다. 기본 메뉴의 기존 수어 모드와 실행 경로가 다릅니다.
+> **한국수어 30클래스 웹캠 인식**: 단어 23개·문장 7개를 구간 단위로 인식하고 단어를 규칙으로 조합합니다. `main.py --live-ksl`로 실행합니다. **[팀원용 설치·자료 배치·실행 안내](docs/ksl_team_guide.md)** — 학습된 30클래스 모델은 포함되어 있어 별도 ZIP 없이 실행할 수 있습니다. 학습 데이터는 포함하지 않습니다. 기본 메뉴의 기존 수어 모드와 실행 경로가 다릅니다.
 
 ## 현재 구현 상태
 
@@ -35,7 +35,7 @@ python scripts/download_model.py
 python main.py
 ```
 
-모델 다운로드는 공식 MediaPipe Gesture Recognizer 번들을 가져옵니다. 저장소에 모델 파일은 포함하지 않습니다. 네트워크가 필요한 단계는 다운로드뿐입니다. 환경에 따라 PowerShell 실행 정책 때문에 가상환경 활성화가 차단될 수 있습니다. 그 경우 `.venv\Scripts\python.exe -m pip install -r requirements.txt` 와 `.venv\Scripts\python.exe main.py`처럼 직접 실행할 수 있습니다.
+모델 다운로드는 공식 MediaPipe Gesture Recognizer 번들을 가져옵니다. 한국수어 GRU 가중치는 저장소에 포함하며 MediaPipe 공식 추적 모델은 다운로드합니다. 네트워크가 필요한 단계는 다운로드뿐입니다. 환경에 따라 PowerShell 실행 정책 때문에 가상환경 활성화가 차단될 수 있습니다. 그 경우 `.venv\Scripts\python.exe -m pip install -r requirements.txt` 와 `.venv\Scripts\python.exe main.py`처럼 직접 실행할 수 있습니다.
 
 카메라가 열리지 않으면 `python main.py --camera 1`을 시도하세요.
 
@@ -100,7 +100,7 @@ core/       카메라 인식 결과, 좌표 계산, 모드 상태 및 제스처 
 modes/      sign_language_placeholder / mini_game / presentation 기능 분리
 ui/         OpenCV 프리뷰 오버레이
 training/   데이터 수집 및 앞으로 추가할 모델 학습 코드
-models/     다운로드/학습 모델 (gitignore)
+models/     배포용 30클래스 모델 포함 / 나머지 모델은 별도 다운로드·학습
 data/       촬영/랜드마크 데이터 (gitignore)
 scripts/    설치 보조 도구
 sessions/   (아직 없음) 나중에 익명화된 실험 로그 모듈
@@ -158,7 +158,7 @@ GRU 학습, 촬영 그룹 분리 평가, 예측 이벤트와 영상 담당자용
 
 문장 자료가 없으면 전체 30클래스 학습은 진행되지 않습니다. 단일 촬영 그룹의
 부분 실행 점검은 `--smoke-only --allow-partial`을 명시해야 하며 정확도 평가가 아닙니다.
-학습 모델/데이터는 저장소에 포함하지 않습니다. GRU 웹캠 연결은 `main.py --live-ksl`로 실행합니다.
+배포용 30클래스 가중치와 클래스 정보는 저장소에 포함합니다. 학습 데이터는 별도 전달합니다. GRU 웹캠 연결은 `main.py --live-ksl`로 실행합니다.
 영상에서 같은 형식으로 좌표를 추출하는 기능은 별도 구현 대상이며, 게임에는 액션 메타데이터만 제공합니다.
 
 **처음 실행하는 팀원은 [팀원용 안내](docs/ksl_team_guide.md)를 먼저 확인하세요.**

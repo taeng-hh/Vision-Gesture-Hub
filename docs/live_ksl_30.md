@@ -6,7 +6,7 @@
 .venv\Scripts\python.exe main.py --live-ksl
 ```
 
-수어인식실행.cmd를 더블클릭해도 됩니다. 기본 모델은 models/ksl30_robust_v2입니다. 기존 모델은 models/ksl30_complete_v1에 보존되어 있습니다.
+수어인식실행.cmd를 더블클릭해도 됩니다. 기본 모델은 models/ksl30_robust_v2입니다. 가중치와 클래스 정보가 Git에 포함되어 별도 데이터 없이 실행할 수 있습니다.
 Space로 시작하고 단어 또는 문장 하나를 수행한 다음 Space로 완료합니다.
 단어는 누적하고 문장은 누적 단어를 비운 뒤 해당 문장을 출력합니다.
 Enter는 누적 단어를 조합하고 Backspace는 삭제, C는 초기화, Q/Esc는 종료합니다.
@@ -19,7 +19,7 @@ Enter는 누적 단어를 조합하고 Backspace는 삭제, C는 초기화, Q/Es
 낮은 점수/작은 점수 차이는 거절하며 임계값은 아직 보정하지 않았습니다.
 모드 선택 없이 모델의 word/sentence 클래스 유형으로 출력합니다. 자유로운 수어 문장 번역이 아닙니다.
 영상은 저장하거나 전송하지 않으며 game_action을 운영체제/게임 명령으로 실행하지 않습니다.
-이전 모델 실행: .venv\Scripts\python.exe sign_language_webcam.py --model models/ksl_aihub_first.npz
+이전 모델을 별도로 보유한 경우에만 실행: .venv\Scripts\python.exe sign_language_webcam.py --model models/ksl_aihub_first.npz
 
 ## 인식이 보류되는 경우
 

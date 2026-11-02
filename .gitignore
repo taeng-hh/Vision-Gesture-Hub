@@ -41,3 +41,10 @@ models/**
 *.zip.part*
 학습동작_골격보기.html
 공유용/
+
+# Published inference bundle only; training data and other local models stay ignored.
+!models/ksl30_robust_v2/
+!models/ksl30_robust_v2/model.pt
+!models/ksl30_robust_v2/classes.json
+!models/ksl30_robust_v2/metrics.json
+!models/ksl30_robust_v2/README.md

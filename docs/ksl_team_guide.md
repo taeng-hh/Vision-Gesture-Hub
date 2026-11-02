@@ -7,44 +7,43 @@
 
 - Windows 10/11, 웹캠, Python 3.11(팀에서 3.11.9로 확인)
 - 이 Git 저장소의 최신 코드
-- 별도 전달받은 `KSL30_학습용_모델포함.zip` (약 1.5MB)
-- 원본 JSON을 확인할 사람만 `KSL30_선별원본_JSON.zip` (약 6.8MB)
 
-ZIP, 키포인트, morpheme, 학습 모델, 생성된 골격 HTML은 Git에 올리지 않습니다. 원본 영상은 두 ZIP에 없습니다.
-ZIP에도 최소 학습 코드가 들어 있지만, **최신 코드는 이 저장소를 사용하세요.** ZIP 안의 코드로 저장소를 덮어쓰지 않습니다.
+**웹캠 실행만 할 때는 별도 ZIP이나 학습 데이터가 필요하지 않습니다.**
+학습된 `models/ksl30_robust_v2/model.pt`와 `classes.json`은 Git에 포함됩니다. 재학습도 필요하지 않습니다.
+MediaPipe 손/몸 추적 모델은 아래 설치 단계에서 공식 파일을 다운로드합니다.
 
-## 2. 저장소와 자료 배치
+## 2. 저장소 받기
 
-OneDrive 밖의 짧은 경로(예: `C:\CV_Project\Vision-Gesture-Hub`)를 권장합니다.
-이미 clone한 팀원은 작업 중인 변경을 보존한 상태에서 최신 코드를 받으세요.
-학습용 ZIP은 먼저 임시 폴더에 풀고, 아래 세 항목만 저장소로 복사합니다.
+OneDrive 밖의 짧은 경로를 권장합니다. 처음 받는 경우 CMD에서:
 
-| ZIP에서 가져올 항목 | 저장소 안에 놓을 위치 |
-|---|---|
-| `data/ksl30_shared` 폴더 | `data/ksl30_shared` |
-| `models/ksl30_robust_v2` 폴더 | `models/ksl30_robust_v2` |
-| `학습동작_골격보기.html` | 저장소 최상위(선택) |
+```cmd
+mkdir C:\CV_Project
+cd /d C:\CV_Project
+git clone https://github.com/taeng-hh/Vision-Gesture-Hub.git
+cd Vision-Gesture-Hub
+```
 
-정상 배치 예시:
+이미 clone했다면 작업 중인 변경을 보존한 상태에서 `git pull`로 최신 코드를 받으세요.
+학습 모델은 다음 위치에 자동으로 받아집니다.
 
 ```text
 Vision-Gesture-Hub/
   main.py
   sign_language_webcam.py
   수어인식실행.cmd
-  data/ksl30_shared/
-    manifest.json
-    clips/                    ← NPZ 30개
   models/ksl30_robust_v2/
     model.pt
     classes.json
     metrics.json
-    provenance.json
-  학습동작_골격보기.html      ← 선택
+    README.md
 ```
 
-`models/models/...`처럼 폴더가 두 번 겹치지 않았는지 확인하세요.
-JSON ZIP은 원본 확인/재전처리가 필요한 경우에만 `data/ksl30_raw` 같은 별도 폴더에 풀면 됩니다. 웹캠 실행에는 필요하지 않습니다.
+### 재학습·골격 보기를 할 사람만: 별도 자료 ZIP
+
+별도 전달된 `KSL30_학습용_모델포함.zip`에서 `data/ksl30_shared` 폴더만 저장소의 `data/ksl30_shared`로 복사합니다.
+`학습동작_골격보기.html`도 원하면 최상위로 복사합니다. ZIP의 코드나 모델로 Git 최신 파일을 덮어쓰지 마세요.
+`KSL30_선별원본_JSON.zip`은 원본 확인/재전처리가 필요할 때만 `data/ksl30_raw` 등에 풉니다.
+키포인트·morpheme·영상·ZIP·좌표가 포함된 골격 HTML은 Git에 포함하지 않습니다.
 
 ## 3. CMD 설치
 
@@ -101,7 +100,7 @@ HTML에는 실제 좌표가 포함되므로 생성 파일도 Git에 올리지 �
 
 ## 6. 재학습(선택)
 
-전달된 모델로 실행만 할 사람은 재학습하지 않아도 됩니다.
+Git에 포함된 모델로 실행만 할 사람은 재학습하지 않아도 됩니다. 아래 명령은 별도 ZIP의 `data/ksl30_shared`를 배치한 경우에만 실행합니다.
 기본 GRU 재학습:
 
 ```cmd
@@ -121,7 +120,7 @@ HTML에는 실제 좌표가 포함되므로 생성 파일도 Git에 올리지 �
 
 ## 7. 인식이 잘 안 될 때
 
-- `Model not found`: `models/ksl30_robust_v2/model.pt`와 `classes.json` 배치를 확인합니다.
+- `Model not found`: 최신 코드를 받았는지 확인하고 `models/ksl30_robust_v2/model.pt`와 `classes.json`이 있는지 확인합니다. 별도 ZIP에서 모델을 가져올 필요는 없습니다.
 - `No module named torch/PIL`: 위 두 requirements 파일을 같은 `.venv`에 설치했는지 확인합니다.
 - 추적 실패: 얼굴만 크게 잡지 말고 상반신·양쪽 어깨·손이 보이게 합니다.
 - `인식 보류`: 후보 이름·점수·1/2위 차이를 확인합니다. 후보는 확정 결과가 아니며 자막에 추가하지 않습니다.
