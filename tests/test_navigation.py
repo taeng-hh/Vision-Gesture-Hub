@@ -37,14 +37,14 @@ class TestNavigation(unittest.TestCase):
     def test_toggle_requires_leaving_before_repeating(self):
         nav = GestureNavigation()
         point = hand(0.8, 0.08)
-        self.assertEqual(self.hold(nav, point, Mode.PC), "TOGGLE")
-        self.assertIsNone(self.hold(nav, point, Mode.PC, 1.5))
-        nav.update(hand(0.5, 0.5), Mode.PC, 3)
-        self.assertEqual(self.hold(nav, point, Mode.PC, 3.1), "TOGGLE")
+        self.assertEqual(self.hold(nav, point, Mode.PRESENTATION), "TOGGLE")
+        self.assertIsNone(self.hold(nav, point, Mode.PRESENTATION, 1.5))
+        nav.update(hand(0.5, 0.5), Mode.PRESENTATION, 3)
+        self.assertEqual(self.hold(nav, point, Mode.PRESENTATION, 3.1), "TOGGLE")
 
     def test_home_disables_os_actions(self):
         manager = ModeManager()
-        manager.select(Mode.PC)
+        manager.select(Mode.PRESENTATION)
         manager.toggle_actions()
         event = self.hold(GestureNavigation(), hand(0.1, 0.08), manager.mode)
         self.assertEqual(event, "HOME")
@@ -53,3 +53,6 @@ class TestNavigation(unittest.TestCase):
 
     def test_sign_mode_has_no_enable_button(self):
         self.assertIsNone(self.hold(GestureNavigation(), hand(0.8, 0.08), Mode.SIGN))
+
+    def test_runner_has_no_enable_button(self):
+        self.assertIsNone(self.hold(GestureNavigation(), hand(0.8, 0.08), Mode.PC))

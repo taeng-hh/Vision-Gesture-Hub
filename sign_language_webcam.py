@@ -7,7 +7,8 @@ import cv2
 import mediapipe as mp
 from core.aihub_words import AIHubWordModel
 from core.detector import GestureDetector
-from core.live_sign import LiveSignSession, MixedLiveSignSession, webcam_frame
+from core.game_launch_gesture import GameLaunchGesture
+from core.sign_language_session import LiveSignSession, MixedLiveSignSession, webcam_frame
 from ui.ksl_overlay import draw_ksl_overlay
 
 ROOT = Path(__file__).resolve().parent
@@ -19,6 +20,8 @@ def main():
     parser.add_argument('--model', type=Path, default=ROOT / 'models/ksl30_robust_v2')
     parser.add_argument('--pose-model', type=Path, default=ROOT / 'models/pose_landmarker_lite.task')
     args = parser.parse_args()
+    launcher = GameLaunchGesture()
+    title = 'KSL Webcam - Words and Sentences'
     if not args.pose_model.exists():
         parser.error('Run: .venv\\Scripts\\python.exe scripts\\download_pose_model.py')
     if args.model.is_dir():
@@ -54,7 +57,30 @@ def main():
                 landmarks = body.pose_landmarks[0] if body.pose_landmarks else None
                 h, w = raw.shape[:2]
                 frame = webcam_frame(observation, landmarks, w, h)
+                was_recording = session.recording
                 session.update(frame, now)
+                if launcher.update(observation, now, recording=was_recording or session.recording):
+                    # Release the camera before the game opens its own capture.
+                    cap.release()
+                    try:
+                        cv2.destroyWindow(title)
+                    except cv2.error:
+                        pass
+                    try:
+                        from modes.mini_game import run_game
+                        # Legacy single-file word models cannot drive the game.
+                        game_model = args.model if args.model.is_dir() else None
+                        run_game(args.camera, game_model, args.pose_model)
+                        session.status = '수화 해석으로 돌아왔습니다. Space로 녹화하세요.'
+                    except (FileNotFoundError, RuntimeError) as exc:
+                        session.status = f'미니게임 실행 실패: {exc}'
+                    finally:
+                        cap.open(args.camera)
+                        if not cap.isOpened():
+                            raise RuntimeError('Camera unavailable after game')
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    continue
                 display = cv2.flip(raw, 1)
                 if frame is not None:
                     for p in frame[:42]:
@@ -65,14 +91,17 @@ def main():
                 cv2.putText(display, 'REC' if session.recording else 'READY | SPACE: record | Q: quit',
                             (10, 28), cv2.FONT_HERSHEY_SIMPLEX, .6,
                             (0, 0, 255) if session.recording else (0, 255, 100), 2)
-                lines = session.display_lines
+                lines = list(session.display_lines)
                 if frame is None and not session.recording:
                     lines[2] = '상반신과 어깨, 손을 카메라에 보이게 해 주세요.'
+                lines.append('녹화하지 않을 때 V 손 모양을 1.2초 유지 → 미니게임')
+                if launcher.progress and not session.recording:
+                    lines.append(f'미니게임 열기: {int(launcher.progress * 100)}%')
                 draw_ksl_overlay(display, lines)
-                cv2.imshow('KSL Webcam - Words and Sentences', display)
+                cv2.imshow(title, display)
                 key = cv2.waitKey(1) & 0xff
                 if key in (ord('q'), ord('Q'), 27): break
-                if cv2.getWindowProperty('KSL Webcam - Words and Sentences', cv2.WND_PROP_VISIBLE) < 1: break
+                if cv2.getWindowProperty(title, cv2.WND_PROP_VISIBLE) < 1: break
                 session.handle_key(key, now)
     except KeyboardInterrupt:
         pass

@@ -27,7 +27,7 @@ class ModeManager:
         self.actions_enabled = False  # Safe on every mode transition.
 
     def toggle_actions(self):
-        if self.mode not in (Mode.PC, Mode.PRESENTATION):
+        if self.mode != Mode.PRESENTATION:
             self.actions_enabled = False
         else:
             self.actions_enabled = not self.actions_enabled

@@ -14,7 +14,7 @@ class Target:
 CARDS = (
     Target(Mode.SIGN.value, "SIGN LANGUAGE", (0.04, 0.40, 0.32, 0.80)),
     Target(Mode.PRESENTATION.value, "PRESENTATION", (0.36, 0.40, 0.64, 0.80)),
-    Target(Mode.PC.value, "PC CONTROL", (0.68, 0.40, 0.96, 0.80)),
+    Target(Mode.PC.value, "SIGN GALAGA", (0.68, 0.40, 0.96, 0.80)),
 )
 HOME = Target("HOME", "HOME", (0.02, 0.02, 0.27, 0.15))
 TOGGLE = Target("TOGGLE", "ENABLE / DISABLE", (0.60, 0.02, 0.98, 0.15))
@@ -23,7 +23,7 @@ TOGGLE = Target("TOGGLE", "ENABLE / DISABLE", (0.60, 0.02, 0.98, 0.15))
 def targets_for(mode):
     if mode == Mode.IDLE:
         return CARDS
-    return (HOME, TOGGLE) if mode in (Mode.PC, Mode.PRESENTATION) else (HOME,)
+    return (HOME, TOGGLE) if mode == Mode.PRESENTATION else (HOME,)
 
 
 class GestureNavigation:

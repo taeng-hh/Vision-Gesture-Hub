@@ -10,7 +10,7 @@ core.detector.GestureDetector  (MediaPipe -> neutral dataclasses)
 core.mode_manager.ModeManager (exactly one mode)
       |              |                 |
       v              v                 v
-modes.sign_language  modes.pc_control  modes.presentation
+modes.sign_language_placeholder  modes.mini_game  modes.presentation
    (placeholder)       |                 |
                        v                 v
                OS mouse actions    OS keyboard actions
@@ -22,8 +22,8 @@ modes.sign_language  modes.pc_control  modes.presentation
 - In a mode, dwell on `HOME` to return. PC and presentation modes also have an `ENABLE` / `DISABLE` control. Leave the control before selecting again.
 - Navigation controls take priority over mode actions. Entering a mode keeps OS actions off until explicitly enabled.
 - `core/` must not launch programs or send input events.
-- `modes/sign_language.py` must never execute OS actions.
-- `modes/pc_control.py` and `modes/presentation.py` are gated by `actions_enabled`.
+- `modes/sign_language_placeholder.py` must never execute OS actions.
+- `modes/mini_game.py` and `modes/presentation.py` are gated by `actions_enabled`.
 - Switching modes disables OS actions until the operator explicitly enables them again.
 - Existing MediaPipe hand-shape labels are **not** Korean Sign Language translations.
 - Landmarks are normalized image coordinates; physical screen touch requires separate calibration and depth sensing.

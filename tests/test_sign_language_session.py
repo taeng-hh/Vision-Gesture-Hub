@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 import numpy as np
-from core.live_sign import LiveSignSession, MixedLiveSignSession, webcam_frame
+from core.sign_language_session import LiveSignSession, MixedLiveSignSession, webcam_frame
 from core.types import Hand, Landmark, Observation
 
 

@@ -30,7 +30,7 @@ OneDrive 밖의 짧은 경로(예: `C:\CV_Project\Vision-Gesture-Hub`)를 권장
 ```text
 Vision-Gesture-Hub/
   main.py
-  live_ksl.py
+  sign_language_webcam.py
   수어인식실행.cmd
   data/ksl30_shared/
     manifest.json
@@ -135,6 +135,6 @@ HTML에는 실제 좌표가 포함되므로 생성 파일도 Git에 올리지 �
 학습 자료 재인식 30/30이나 합성 변형 자료 성능은 실제 웹캠·새 사용자 정확도가 아닙니다.
 AIHub 키포인트와 웹캠 MediaPipe의 추출기 차이도 남아 있습니다. 점수는 보정된 정답 확률이 아닙니다.
 실제 동작 정확도 개선에는 여러 사람의 독립 촬영·검증 자료가 필요합니다.
-라벨 설정과 영상 담당자의 좌표 계약은 [학습 안내](ksl_training.md), 실행 세부 사항은 [웹캠 안내](live_ksl_30.md)를 참고하세요.
+라벨 설정과 영상 담당자의 좌표 계약은 [학습 안내](ksl_training.md), 실행 세부 사항은 [웹캠 안내](sign_language_webcam_30.md)를 참고하세요.
 
 웹캠 실행은 영상을 저장하거나 전송하지 않습니다. 원본 데이터의 이용 조건은 사용자가 확인하고, 팀 자료는 별도로 전달합니다.

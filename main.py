@@ -9,9 +9,9 @@ import pyautogui
 from core.detector import GestureDetector
 from core.mode_manager import KEY_MODES, Mode, ModeManager
 from core.navigation import GestureNavigation
-from modes.pc_control import PCController
+from modes.mini_game import run_game
 from modes.presentation import PresentationController
-from modes.sign_language import SignLanguageMode
+from modes.sign_language_placeholder import SignLanguageMode
 from ui.overlay import draw_overlay
 
 ROOT = Path(__file__).resolve().parent
@@ -19,10 +19,16 @@ ROOT = Path(__file__).resolve().parent
 
 def main():
     import sys
-    if "--live-ksl" in sys.argv:
-        sys.argv.remove("--live-ksl")
-        from live_ksl import main as run_live_ksl
-        return run_live_ksl()
+    if "--runner" in sys.argv:
+        sys.argv.remove("--runner")
+        import runpy
+        return runpy.run_module("modes.mini_game", run_name="__main__")
+    if "--hub" not in sys.argv:
+        if "--live-ksl" in sys.argv:
+            sys.argv.remove("--live-ksl")
+        from sign_language_webcam import main as run_sign_language_webcam
+        return run_sign_language_webcam()
+    sys.argv.remove("--hub")
     parser = argparse.ArgumentParser(description="Vision Gesture Hub starter")
     parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index")
     parser.add_argument("--model", type=Path,
@@ -38,7 +44,6 @@ def main():
 
     manager = ModeManager()
     navigation = GestureNavigation()
-    pc = PCController()
     presentation = PresentationController()
     sign = SignLanguageMode()
     start = time.monotonic()
@@ -48,6 +53,22 @@ def main():
         cv2.resizeWindow("Vision Gesture Hub", 1280, 960)
         with GestureDetector(args.model, max_hands=2) as detector:
             while True:
+                if manager.mode == Mode.PC:
+                    cap.release()
+                    cv2.destroyWindow("Vision Gesture Hub")
+                    try:
+                        run_game(args.camera)
+                    except (FileNotFoundError, RuntimeError) as exc:
+                        print(f"Galaga: {exc}")
+                    finally:
+                        manager.select(Mode.IDLE)
+                        navigation.reset()
+                        cap.open(args.camera)
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                        cv2.namedWindow("Vision Gesture Hub", cv2.WINDOW_NORMAL)
+                        cv2.resizeWindow("Vision Gesture Hub", 1280, 960)
+                    continue
                 success, frame = cap.read()
                 if not success:
                     print("Camera frame read failed")
@@ -65,12 +86,10 @@ def main():
                         manager.toggle_actions()
                     else:
                         manager.select(Mode.IDLE if selection == "HOME" else Mode(selection))
-                    pc.reset()
                     presentation.reset()
                 # Menu interaction takes priority over mouse/keyboard actions.
                 navigating = navigation.hover is not None or selection is not None
                 if navigating:
-                    pc.reset()
                     presentation.reset()
 
                 try:
@@ -80,14 +99,11 @@ def main():
                         status = "Hold to select; move away to resume"
                     elif manager.mode == Mode.SIGN:
                         status = sign.update(observation)
-                    elif manager.mode == Mode.PC and manager.actions_enabled:
-                        status = pc.update(primary, now)
                     elif manager.mode == Mode.PRESENTATION and manager.actions_enabled:
                         status = presentation.update(primary, now)
                 except pyautogui.FailSafeException:
                     # Moving pointer to a screen corner is an emergency stop.
                     manager.actions_enabled = False
-                    pc.reset()
                     presentation.reset()
                     status = "PyAutoGUI fail-safe: actions disabled"
 
@@ -99,21 +115,17 @@ def main():
                 if key in KEY_MODES:
                     manager.select(KEY_MODES[key])
                     navigation.reset()
-                    pc.reset()
                     presentation.reset()
                     print("Mode:", manager.mode.value, "(actions OFF)")
                 elif key == ord("e"):
                     enabled = manager.toggle_actions()
                     navigation.reset()
-                    pc.reset()
                     presentation.reset()
                     print("OS actions:", "ON" if enabled else "OFF")
     finally:
-        try:
-            pc.reset()
-        finally:
-            cap.release()
-            cv2.destroyAllWindows()
+        presentation.reset()
+        cap.release()
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

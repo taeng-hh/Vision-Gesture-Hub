@@ -19,7 +19,7 @@ Enter는 누적 단어를 조합하고 Backspace는 삭제, C는 초기화, Q/Es
 낮은 점수/작은 점수 차이는 거절하며 임계값은 아직 보정하지 않았습니다.
 모드 선택 없이 모델의 word/sentence 클래스 유형으로 출력합니다. 자유로운 수어 문장 번역이 아닙니다.
 영상은 저장하거나 전송하지 않으며 game_action을 운영체제/게임 명령으로 실행하지 않습니다.
-이전 모델 실행: .venv\Scripts\python.exe live_ksl.py --model models/ksl_aihub_first.npz
+이전 모델 실행: .venv\Scripts\python.exe sign_language_webcam.py --model models/ksl_aihub_first.npz
 
 ## 인식이 보류되는 경우
 
