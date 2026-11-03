@@ -18,6 +18,12 @@ class GalagaGame:
         self._formation()
 
     def _formation(self):
+        self.boss = None
+        if self.stage == 10:
+            self.enemies = []
+            self.boss = dict(x=.5, y=.20, hp=60, max_hp=60,
+                             half_width=.17, half_height=.075)
+            return
         self.enemies = [dict(x=.14+c*.12, y=.13+r*.09, home_x=.14+c*.12,
                              home_y=.13+r*.09, row=r, diving=False, phase=0.)
                         for r in range(3) for c in range(7)]
@@ -51,6 +57,13 @@ class GalagaGame:
         if self.fire_in <= 0:
             self.bullets.append(dict(x=self.x, y=self.y-.035))
             self.fire_in = .14 if self.clock < self.boost_until else .32
+        if self.boss:
+            self.boss['x'] = .5 + .28*math.sin(self.clock*.8)
+            if self.enemy_fire_in <= 0:
+                for offset in (-.12, -.06, 0., .06, .12):
+                    self.enemy_bullets.append(dict(x=self.boss['x']+offset,
+                                                  y=self.boss['y']+.075))
+                self.enemy_fire_in = .65
         if self.enemies and self.enemy_fire_in <= 0:
             enemy = self.rng.choice(self.enemies)
             self.enemy_bullets.append(dict(x=enemy['x'], y=enemy['y']+.025))
@@ -74,6 +87,16 @@ class GalagaGame:
         for bullet in list(self.bullets):
             old_y = bullet['y']
             bullet['y'] -= dt*.85
+            if (self.boss and
+                    abs(self.boss['x']-bullet['x']) < self.boss['half_width'] and
+                    bullet['y']-.025 <= self.boss['y']+self.boss['half_height'] and
+                    old_y+.025 >= self.boss['y']-self.boss['half_height']):
+                self.bullets.remove(bullet)
+                self.boss['hp'] -= 1
+                if self.boss['hp'] <= 0:
+                    self.score += 5000
+                    self.boss = None
+                continue
             target = next((e for e in self.enemies if abs(e['x']-bullet['x']) < .033
                            and bullet['y']-.025 <= e['y'] <= old_y+.025), None)
             if target:
@@ -91,7 +114,7 @@ class GalagaGame:
         for enemy in self.enemies:
             if abs(enemy['x']-self.x) < .04 and abs(enemy['y']-self.y) < .045:
                 self._hit_player()
-        if not self.enemies and self.state == 'running':
+        if not self.enemies and self.boss is None and self.state == 'running':
             self.stage += 1
             self.enemy_bullets.clear()
             self.dive_in, self.enemy_fire_in = 2., 1.
@@ -108,7 +131,8 @@ def run_game(camera=0, model=None, pose_model=None):
     import cv2
     import mediapipe as mp
     from core.detector import GestureDetector
-    from core.sign_language_session import MixedLiveSignSession, webcam_frame
+    from core.sign_language_session import webcam_frame
+    from core.auto_game_session import AutoGameSession
     from ksl.predict import Recognizer
     from ui.mini_game_view import draw_galaga
 
@@ -119,18 +143,7 @@ def run_game(camera=0, model=None, pose_model=None):
         raise FileNotFoundError(f'Required models: {model / "model.pt"}, {pose_model}')
     game = GalagaGame()
 
-    class GameSession(MixedLiveSignSession):
-        def finish_word(self):
-            self.tokens = []
-            accepted = super().finish_word()
-            if accepted and self.tokens:
-                action = next((c.get('game_action') for c in self.model.classes
-                               if c['class_id'] == self.tokens[-1]), None)
-                if action: game.action(action)
-                else: self.status += ' · 게임 조작 단어가 아닙니다.'
-            return accepted
-
-    session = GameSession(Recognizer(model))
+    session = AutoGameSession(Recognizer(model), game)
     options = mp.tasks.vision.PoseLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_buffer=pose_model.read_bytes()),
         running_mode=mp.tasks.vision.RunningMode.VIDEO, num_poses=1)
@@ -155,9 +168,8 @@ def run_game(camera=0, model=None, pose_model=None):
                 h, w = raw.shape[:2]
                 skeleton = webcam_frame(observation,
                     body.pose_landmarks[0] if body.pose_landmarks else None, w, h)
-                recording = session.recording
                 session.update(skeleton, now)
-                game.update(now - previous, frozen=recording or skeleton is None)
+                game.update(now - previous, frozen=skeleton is None)
                 previous = now
                 canvas = draw_galaga(game, raw, session, skeleton is not None)
                 cv2.imshow(title, canvas)
@@ -170,8 +182,8 @@ def run_game(camera=0, model=None, pose_model=None):
                 elif key == ord('p'):
                     if game.state == 'running': game.state = 'paused'
                     elif game.state == 'paused': game.state = 'running'
-                elif key == ord(' '): session.handle_key(key, now)
-                elif not session.recording:
+                    session.cancel_recording()
+                else:
                     action = {13: 'start', 10: 'start', ord('a'): 'left', ord('d'): 'right',
                               ord('w'): 'up', ord('s'): 'down', ord('f'): 'accelerate'}.get(key)
                     if action: game.action(action)

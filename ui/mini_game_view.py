@@ -65,6 +65,21 @@ def draw_galaga(game, camera, session, tracking):
                                     ox+(c+1)*scale-1, oy+(r+1)*scale-1), fill=colors[pixel])
 
     enemy_sprite = ['..1...1..', '.121.121.', '111111111', '112111211', '..11111..', '.11...11.', '1.......1']
+    if game.boss:
+        boss = game.boss
+        text(52, 168, 'STAGE 10 / BOSS', 15, '#ff778d')
+        text(663, 168, f"HP {boss['hp']} / {boss['max_hp']}", 15, '#ffd166')
+        draw.rounded_rectangle((52, 195, 834, 211), radius=6, fill='#392038')
+        hp_width = int(778*max(0, boss['hp'])/boss['max_hp'])
+        if hp_width:
+            draw.rounded_rectangle((54, 197, 54+hp_width, 209), radius=5, fill='#ff5577')
+        boss_sprite = ['....11.........11....', '...1111.......1111...',
+                       '..11111111111111111..', '.1112211111111122111.',
+                       '111122111331111221111', '111111113333311111111',
+                       '.1111111133311111111.', '..1111..11111..1111..',
+                       '..11.....111.....11..']
+        sprite(boss['x'], boss['y'], boss_sprite,
+               {'1': '#d566ff', '2': '#fff09a', '3': '#ff5577'}, scale=12)
     for enemy in game.enemies:
         color = ['#ff778d', '#ffd166', '#a998ff'][enemy['row']]
         sprite(enemy['x'], enemy['y'], enemy_sprite, {'1': color, '2': '#071229'})
@@ -81,7 +96,6 @@ def draw_galaga(game, camera, session, tracking):
     overlay = None
     if game.state == 'ready': overlay = ('READY TO FLY?', '시작 수화 또는 Enter로 출격하세요. 탄환은 자동 발사됩니다.')
     elif game.state == 'over': overlay = ('GAME OVER', f'{game.score}점 획득! 시작 수화 또는 Enter로 다시 도전하세요.')
-    elif session.recording: overlay = ('수화 인식 중', '동작을 마친 뒤 Space를 누르면 전투가 이어집니다.')
     elif game.state == 'paused': overlay = ('PAUSED', 'P를 누르면 계속합니다.')
     elif not tracking: overlay = ('카메라 추적 대기', '상반신과 손이 보이면 전투가 이어집니다.')
     if overlay:
@@ -91,7 +105,7 @@ def draw_galaga(game, camera, session, tracking):
 
     card((882, 116, 1252, 436))
     text(902, 134, 'LIVE CAMERA', 13, muted)
-    text(1090, 134, '녹화 중' if session.recording else ('추적 중' if tracking else '추적 대기'), 14, mint)
+    text(1090, 134, '자동 인식 중' if tracking else '추적 대기', 14, mint)
     preview = Image.fromarray(camera[:, ::-1, ::-1]).resize((330, 220))
     image.paste(preview, (902, 168))
     text(902, 401, '상반신과 양손이 보이게 해 주세요.', 14, muted)
@@ -103,8 +117,8 @@ def draw_galaga(game, camera, session, tracking):
         text(1095, 509+i*33, action, 17, mint)
     text(902, 651, '자동 발사 · 피격 후 2초 무적', 14, muted)
     card((28, 710, 1252, 798))
-    text(50, 734, 'SPACE', 23, mint)
-    text(185, 720, '수화 녹화 시작 / 완료', 18)
+    text(50, 734, 'AUTO', 23, mint)
+    text(185, 720, '수어 자동 인식 · 같은 방향은 잠시 유지하거나 반복하세요.', 18)
     wrapped(session.status, 185, 751, 1035, 15, 1)
     text(35, 818, 'P 일시정지    R 초기화    Q / ESC 나가기', 14, muted)
     text(655, 818, 'Enter 출격 · W/A/S/D 방향 이동 · F 연사', 14, muted)

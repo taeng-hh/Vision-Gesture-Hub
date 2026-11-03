@@ -4,6 +4,29 @@ from modes.mini_game import GalagaGame
 
 
 class TestGalagaGame(unittest.TestCase):
+    def test_direction_sign_metadata_moves_player(self):
+        import json
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1]
+        for path in (root / 'config/ksl_classes.json',
+                     root / 'models/ksl30_robust_v2/classes.json'):
+            data = json.loads(path.read_text(encoding='utf-8'))
+            classes = data['classes'] if isinstance(data, dict) else data
+            by_id = {c['class_id']: c for c in classes}
+            for class_id, action, dx, dy in (
+                ('WORD1342', 'left', -.12, 0),
+                ('WORD1343', 'right', .12, 0),
+                ('WORD2100', 'up', 0, -.10),
+                ('WORD2577', 'down', 0, .10),
+            ):
+                with self.subTest(path=path, action=action):
+                    game = self.game()
+                    game.x = game.y = .6
+                    self.assertEqual(by_id[class_id]['game_action'], action)
+                    game.action(by_id[class_id]['game_action'])
+                    self.assertAlmostEqual(game.x, .6 + dx)
+                    self.assertAlmostEqual(game.y, .6 + dy)
+
     def game(self):
         game = GalagaGame(random.Random(0))
         game.action('start')
@@ -45,7 +68,7 @@ class TestGalagaGame(unittest.TestCase):
         for diving, points in [(False, 100), (True, 200)]:
             game = self.game()
             enemy = game.enemies[0]
-            enemy.update(x=.5, home_x=.5, y=.3, home_y=.3, diving=diving)
+            enemy.update(x=.5, home_x=.5, y=.3, home_y=.3, diving=diving, phase=-.1)
             game.enemies = [enemy]
             game.bullets = [dict(x=.5, y=.36)]
             game.update(.1)
@@ -88,6 +111,37 @@ class TestGalagaGame(unittest.TestCase):
         game.update(.1)
         self.assertEqual(game.clock, 0)
         self.assertEqual(game.state, 'ready')
+
+    def test_stage_ten_spawns_boss(self):
+        game = self.game()
+        game.stage = 9
+        game.enemies.clear()
+        game.update(.01)
+        self.assertEqual(game.stage, 10)
+        self.assertEqual(game.enemies, [])
+        self.assertEqual(game.boss['hp'], 60)
+        game.enemy_fire_in = 0
+        game.update(.01)
+        self.assertEqual(len(game.enemy_bullets), 5)
+        self.assertEqual(game.stage, 10)
+
+    def test_boss_damage_defeat_and_restart(self):
+        game = self.game()
+        game.stage = 10
+        game._formation()
+        game.bullets = [dict(x=.5, y=.30)]
+        game.update(.1)
+        self.assertEqual(game.boss['hp'], 59)
+        game.boss['hp'] = 1
+        game.bullets = [dict(x=game.boss['x'], y=.30)]
+        game.update(.1)
+        self.assertEqual(game.score, 5000)
+        self.assertEqual(game.stage, 11)
+        self.assertIsNone(game.boss)
+        self.assertEqual(len(game.enemies), 21)
+        game.reset()
+        self.assertIsNone(game.boss)
+        self.assertEqual(game.stage, 1)
 
 
 if __name__ == '__main__':

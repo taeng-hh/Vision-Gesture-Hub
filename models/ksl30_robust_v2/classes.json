@@ -196,8 +196,8 @@
     "expected_gloss": [
       "위"
     ],
-    "game_action": "jump",
-    "review_note": "게임 매핑: '위' 수어가 '점프'라는 뜻은 아님"
+    "game_action": "up",
+    "review_note": "게임 조작에도 사용 · 방향 수어 → 게임 위쪽 이동"
   },
   {
     "class_id": "WORD2577",
@@ -206,8 +206,8 @@
     "expected_gloss": [
       "아래"
     ],
-    "game_action": "duck",
-    "review_note": "게임 매핑: '아래' 수어가 '숙이다'라는 뜻은 아님"
+    "game_action": "down",
+    "review_note": "게임 조작에도 사용 · 방향 수어 → 게임 아래쪽 이동"
   },
   {
     "class_id": "WORD1274",

@@ -3,17 +3,6 @@ import argparse
 import time
 from pathlib import Path
 
-import cv2
-import pyautogui
-
-from core.detector import GestureDetector
-from core.mode_manager import KEY_MODES, Mode, ModeManager
-from core.navigation import GestureNavigation
-from modes.mini_game import run_game
-from modes.presentation import PresentationController
-from modes.sign_language_placeholder import SignLanguageMode
-from ui.overlay import draw_overlay
-
 ROOT = Path(__file__).resolve().parent
 
 
@@ -29,6 +18,17 @@ def main():
         from sign_language_webcam import main as run_sign_language_webcam
         return run_sign_language_webcam()
     sys.argv.remove("--hub")
+    # Load desktop-control dependencies only for the optional legacy hub.
+    import cv2
+    import pyautogui
+    from core.detector import GestureDetector
+    from core.mode_manager import KEY_MODES, Mode, ModeManager
+    from core.navigation import GestureNavigation
+    from modes.mini_game import run_game
+    from modes.presentation import PresentationController
+    from modes.sign_language_placeholder import SignLanguageMode
+    from ui.overlay import draw_overlay
+
     parser = argparse.ArgumentParser(description="Vision Gesture Hub starter")
     parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index")
     parser.add_argument("--model", type=Path,

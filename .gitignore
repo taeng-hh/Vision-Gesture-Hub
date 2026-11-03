@@ -1,5 +1,6 @@
 # Python environments and caches
 .venv/
+.python-installer.exe
 venv/
 __pycache__/
 *.py[cod]

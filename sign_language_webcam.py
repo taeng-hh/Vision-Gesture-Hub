@@ -21,6 +21,9 @@ def main():
     parser.add_argument('--pose-model', type=Path, default=ROOT / 'models/pose_landmarker_lite.task')
     args = parser.parse_args()
     launcher = GameLaunchGesture()
+    print('수화 번역기 시작 | Space: 수어 입력 시작/완료')
+    print('녹화 대기 중 V 손 모양을 1.2초 유지하면 미니게임이 열립니다.')
+    print('게임에서 Q 또는 Esc: 수화 번역기로 돌아가기')
     title = 'KSL Webcam - Words and Sentences'
     if not args.pose_model.exists():
         parser.error('Run: .venv\\Scripts\\python.exe scripts\\download_pose_model.py')

@@ -36,7 +36,8 @@ def webcam_frame(observation, pose, width, height):
     if not hands:
         return frame
     if len(hands) > 2:
-        return None
+        # Unexpected duplicate detections: preserve the shoulders, skip hands.
+        return frame
     costs = []
     for slots in permutations(range(2), len(hands)):
         distances = [np.linalg.norm(xy(h.landmarks[0]) - xy(pose[(15, 16)[slot]])) / body
@@ -44,10 +45,13 @@ def webcam_frame(observation, pose, width, height):
         if all(confidence(pose[(15, 16)[s]]) >= .5 for s in slots):
             costs.append((sum(distances), slots, distances))
     if not costs:
-        return None
+        # Pose wrists were unreliable. Do not invent anatomical left/right.
+        return frame
     costs.sort()
     if max(costs[0][2]) > .65 or (len(costs) > 1 and costs[1][0] - costs[0][0] < .10):
-        return None
+        # Ambiguous hand matching is not the same as lost shoulders.
+        # Leave hand confidence zero; the session skips this input frame.
+        return frame
     for hand, slot in zip(hands, costs[0][1]):
         for i, point in enumerate(hand.landmarks):
             frame[slot * 21 + i] = [*xy(point), 1.]
@@ -159,71 +163,124 @@ class LiveSignSession:
 
 
 class MixedLiveSignSession(LiveSignSession):
-    """One recording yields either a word event or a complete sentence."""
+    """Stable 30-class session: valid hands only, time-aware interpolation.
+
+    Keep the existing (T, 67, 3) unmirrored OpenPose-style input contract.
+    Recording starts/finishes with Space (no automatic segmentation).
+    """
+
     def __init__(self, model):
         super().__init__(model)
         self.names = {c['class_id']: c['text'] for c in model.classes}
         self.max_seconds = 12
         self.max_frames = 1200
+        self.max_tracking_gap = 0.9  # Seconds of continuous missing shoulders.
+        self.min_samples = 6
+        self.min_motion_window = 0.20
+        self.sample_frames = 32   # Matches ksl.data.STEPS.
+        self.last_report = None
         self.status = 'Space로 시작하고 단어 또는 문장 하나를 수행하세요.'
 
     def start(self, now):
         super().start(now)
-        self.status = '입력 중: 단어/문장 하나를 끝낸 뒤 Space를 누르세요.'
+        self.status = '입력 중: 수어 하나를 수행한 뒤 Space로 완료하세요.'
 
     def cancel_recording(self):
         super().cancel_recording()
         self.frame_times = []
         self.tracking_lost_since = None
+        self.no_hand_since = None
+        self.first_hand = None
+        self.skipped_no_hand = 0
+        self.skipped_no_pose = 0
 
     def update(self, frame, now):
-        # Explicit end only: short hand occlusions should not finish a sentence.
         if not self.recording:
             return
         if now < self.started or now - self.started > self.max_seconds:
             self.cancel_recording()
             self.status = '입력 시간 제한: Space로 다시 시작하세요.'
             return
-        if self.last_time is not None and (now < self.last_time or now-self.last_time > 1.5):
-            self.cancel_recording()
-            self.status = '카메라 입력이 끊겨 취소했습니다.'
-            return
+        if self.last_time is not None:
+            if now < self.last_time or now - self.last_time > 1.5:
+                self.cancel_recording()
+                self.status = '카메라 입력이 끊겨 취소했습니다.'
+                return
+            if now == self.last_time:
+                return  # Avoid duplicate timestamps in interpolation.
         self.last_time = now
-        if frame is None:
+
+        # None means lost shoulders/pose, not just lost hands.
+        valid = False
+        if frame is not None:
+            f = np.asarray(frame, dtype=np.float32)
+            valid = (f.shape == (67, 3) and np.isfinite(f).all()
+                     and np.all(f[:, 2] >= 0) and np.all(f[:, 2] <= 1)
+                     and np.all(f[[44, 47], 2] >= .2))
+        if not valid:
+            self.skipped_no_pose += 1
             if self.tracking_lost_since is None:
                 self.tracking_lost_since = now
-            if now-self.tracking_lost_since >= .6:
+            if now - self.tracking_lost_since > self.max_tracking_gap:
                 self.cancel_recording()
-                self.status = '0.6초 이상 손/어깨 추적 실패: 상반신을 보이게 해 주세요.'
+                self.status = '어깨 추적이 오래 끊겨 취소했습니다. 다시 시도하세요.'
             else:
-                self.status = '잠깐 추적 놓침: 손과 어깨를 화면에 유지하세요.'
+                self.status = '어깨 추적 잠시 놓침: 연결이 복구되면 이어서 기록합니다.'
             return
         self.tracking_lost_since = None
-        has_hand = np.any(frame[:42, 2] >= .2)
-        if not self.frames and not has_hand:
-            self.status = '입력 대기: 손을 보이고 동작 후 Space로 완료하세요.'
+
+        # Do not append all-zero hands. They become artificial poses in GRU.
+        if not np.any(f[:42, 2] >= .2):
+            self.skipped_no_hand += 1
+            if self.no_hand_since is None:
+                self.no_hand_since = now
+            self.status = ('손 추적 대기: 손이 다시 보이면 이어서 기록합니다. '
+                           '수어를 마쳤다면 Space로 완료하세요.')
             return
+        self.no_hand_since = None
+
         if len(self.frames) >= self.max_frames:
             self.cancel_recording()
             self.status = '입력 프레임 제한: 다시 시작하세요.'
             return
-        self.frames.append(frame.copy())
+        if self.first_hand is None:
+            self.first_hand = now
+        self.frames.append(f.copy())
         self.frame_times.append(now)
-        if has_hand:
-            self.last_hand = now
-        self.status = f'입력 중 {now-self.started:.1f}초 / {len(self.frames)}프레임 · Space로 완료'
+        self.last_hand = now
+        self.status = (f'녹화 {now-self.first_hand:.1f}초 / {len(self.frames)}프레임 · '
+                       '동작 종료 후 Space')
 
     def timed_frames(self):
-        # Camera FPS varies. Resample actual timestamps instead of assuming equal spacing.
+        """Uniform time sampling with *discrete* confidence/missing masks.
+
+        Never linearly interpolate confidence: that creates phantom hand joints.
+        For XY, interpolate only when both adjacent observations are valid.
+        """
         frames = np.asarray(self.frames, dtype=np.float32)
-        if len(self.frame_times) != len(frames) or len(frames) < 4:
+        if len(frames) < 2:
             return frames
-        times = np.asarray(self.frame_times)
-        if np.any(np.diff(times) <= 0):
-            raise ValueError('Non-increasing timestamps')
-        target = np.linspace(times[0], times[-1], len(frames))
-        flat = frames.reshape(len(frames), -1)
-        return np.stack([np.interp(target, times, c) for c in flat.T], axis=1).reshape(frames.shape)
+        times = np.asarray(self.frame_times, dtype=np.float64)
+        if len(times) != len(frames) or np.any(np.diff(times) <= 0):
+            raise ValueError('Invalid frame timestamps')
+
+        target = np.linspace(times[0], times[-1], self.sample_frames)
+        right = np.searchsorted(times, target, side='left')
+        right = np.clip(right, 0, len(times) - 1)
+        left = np.clip(right - 1, 0, len(times) - 1)
+        denom = times[right] - times[left]
+        weight = np.zeros(len(target), dtype=np.float32)
+        np.divide(target - times[left], denom, out=weight, where=denom > 0)
+
+        a, b = frames[left], frames[right]
+        both_valid = (a[:, :, 2] >= .2) & (b[:, :, 2] >= .2)
+        nearest = np.where((target - times[left]) <= (times[right] - target), left, right)
+        sample = frames[nearest].copy()
+        interpolated_xy = a[:, :, :2] * (1-weight[:, None, None]) + b[:, :, :2] * weight[:, None, None]
+        sample[:, :, :2] = np.where(both_valid[:, :, None], interpolated_xy, sample[:, :, :2])
+        # Confidence is copied from real nearest frames, never synthesized.
+        sample[sample[:, :, 2] < .2, :2] = 0.0
+        return sample.astype(np.float32)
 
     def compose(self):
         rules = {('WORD1534', 'WORD1589'): '밥을 주세요.',
@@ -235,16 +292,22 @@ class MixedLiveSignSession(LiveSignSession):
         return rules.get(tuple(self.tokens), ' '.join(self.names[t] for t in self.tokens))
 
     def finish_word(self):
-        frames = self.timed_frames()
-        duration = self.last_hand - self.started if self.last_hand is not None else 0
+        raw_len = len(self.frames)
+        duration = (self.last_hand - self.first_hand
+                    if self.last_hand is not None and self.first_hand is not None else 0)
+        # Keep diagnostic counts after the recording buffer is cleared.
+        self.last_report = dict(usable=raw_len, hand_missing=self.skipped_no_hand,
+                                pose_missing=self.skipped_no_pose, duration=duration)
+        # Preserve captured frames/timestamps until resampling completes.
+        try:
+            if raw_len < self.min_samples or duration < self.min_motion_window:
+                raise ValueError('Too few frames or short gesture')
+            frames = self.timed_frames()
+        except ValueError:
+            self.cancel_recording()
+            self.status = '동작이 너무 짧거나 프레임 시간이 올바르지 않습니다. 다시 시도하세요.'
+            return False
         self.cancel_recording()
-        if len(frames) < 4 or duration < .20:
-            self.status = '동작이 너무 짧습니다. Space로 다시 시작하세요.'
-            return False
-        visible = np.any(np.asarray(frames)[:, :42, 2] >= .2, axis=1)
-        if np.mean(visible) < .6:
-            self.status = '손이 보이는 프레임이 부족합니다. 손을 화면 안에 유지하세요.'
-            return False
         try:
             result = self.model.predict(frames)
         except ValueError:
