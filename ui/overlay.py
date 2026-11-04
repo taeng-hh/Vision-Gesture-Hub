@@ -1,6 +1,10 @@
 """Debug UI in OpenCV (English-only text because cv2.putText is ASCII-centric)."""
 import cv2
 from core.mode_manager import Mode
+from ui import theme
+
+TEXT, PANEL = theme.bgr(theme.TEXT), theme.bgr(theme.BACKGROUND)
+ACCENT, MUTED, POINTER = theme.bgr(theme.ACCENT), theme.bgr(theme.MUTED), theme.bgr(theme.WARNING)
 from core.navigation import targets_for
 
 
@@ -10,7 +14,7 @@ def draw_overlay(frame, observation, manager, status, navigation=None):
         for p in hand.landmarks:
             x = int(p.x * width)
             y = int(p.y * height)
-            cv2.circle(frame, (x, y), 3, (0, 220, 80), -1)
+            cv2.circle(frame, (x, y), 3, ACCENT, -1)
 
     active = "ON" if manager.actions_enabled else "OFF"
     lines = [
@@ -21,33 +25,33 @@ def draw_overlay(frame, observation, manager, status, navigation=None):
     ]
     for line_no, line in enumerate(lines):
         y = (100 if navigation is not None else 25) + 25 * line_no
-        cv2.rectangle(frame, (5, y - 20), (min(width-5, 620), y + 5), (25, 25, 25), -1)
+        cv2.rectangle(frame, (5, y - 20), (min(width-5, 620), y + 5), PANEL, -1)
         cv2.putText(frame, line[:78], (10, y), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55, (255, 255, 255), 1, cv2.LINE_AA)
+                    0.55, TEXT, 1, cv2.LINE_AA)
     if navigation is not None:
         if manager.mode == Mode.IDLE:
             cv2.putText(frame, "VISION GESTURE HUB", (20, 42),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.85, (255, 255, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.85, TEXT, 2)
             cv2.putText(frame, "Point with your index finger. Hold to enter.",
                         (20, height - 35), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.55, (255, 255, 255), 1)
+                        0.55, TEXT, 1)
         for target in targets_for(manager.mode):
             x1, y1, x2, y2 = target.bounds
             left, top, right, bottom = (int(x1 * width), int(y1 * height),
                                          int(x2 * width), int(y2 * height))
             hovered = navigation.hover == target
-            color = (80, 220, 160) if hovered else (180, 160, 100)
+            color = ACCENT if hovered else MUTED
             cv2.rectangle(frame, (left, top), (right, bottom), color, 3)
             label = target.label
             if target.key == "TOGGLE":
                 label = "DISABLE" if manager.actions_enabled else "ENABLE"
             cv2.putText(frame, label, (left + 8, top + 28),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.48, TEXT, 1)
             if hovered:
                 end = left + int((right - left) * navigation.progress)
                 cv2.rectangle(frame, (left, bottom - 8), (end, bottom), color, -1)
         if navigation.pointer is not None:
             x, y = navigation.pointer
             cv2.circle(frame, (int(x * width), int(y * height)),
-                       10, (0, 240, 255), 2)
+                       10, POINTER, 2)
     return frame

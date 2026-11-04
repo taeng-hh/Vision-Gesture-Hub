@@ -103,12 +103,12 @@ class LiveSpeedFlowTests(unittest.TestCase):
         with ExitStack() as st:
             st.enter_context(patch('fusion.live.cv2.VideoCapture',return_value=cap));st.enter_context(patch('fusion.live.PreviewTracker',return_value=tracker));st.enter_context(patch('fusion.live.ThreadPoolExecutor',ImmediateExecutor));st.enter_context(patch('fusion.live.time.monotonic',side_effect=lambda:index[0]*.05))
             for name in ['namedWindow','resizeWindow','destroyAllWindows','draw_skeleton']:st.enter_context(patch('fusion.live.'+('cv2.' if name!='draw_skeleton' else '')+name))
-            st.enter_context(patch('fusion.live.tracking_status',return_value=[]));st.enter_context(patch('fusion.live.cv2.getWindowProperty',return_value=1));st.enter_context(patch('fusion.live.cv2.waitKey',side_effect=keys));st.enter_context(patch('fusion.live.cv2.imshow'))
-            views=[];st.enter_context(patch('fusion.live.diagnostic_view',side_effect=lambda frame,lines,rois:(views.append(list(lines)) or frame)))
+            st.enter_context(patch('fusion.live.tracking_state',return_value=dict(hands=1,shoulders=True,keypoints=True,tracking_note='')));st.enter_context(patch('fusion.live.cv2.getWindowProperty',return_value=1));st.enter_context(patch('fusion.live.cv2.waitKey',side_effect=keys));st.enter_context(patch('fusion.live.cv2.imshow'))
+            views=[];st.enter_context(patch('fusion.live.draw_translator',side_effect=lambda state:(views.append(state) or state.camera)))
             heavy=st.enter_context(patch('fusion.fast.SharedExtractor'));heavy.return_value.extract.return_value=({'images':np.zeros((1,3,224,224,3),np.uint8)},quality)
             run_camera(model,'.')
         self.assertEqual(modes,['keypoint','rgb']);heavy.return_value.extract.assert_called_once()
-        self.assertIn('단어: a',views[-1]);self.assertIn('출력: a',views[-1])
-        self.assertTrue(any('영상: b' in text for text in views[-1]))
+        self.assertEqual(views[-1].tokens,('a',));self.assertEqual(views[-1].sentence,'a')
+        self.assertTrue(any('영상: b' in text for text in views[-1].debug_lines))
 
 if __name__=='__main__':unittest.main()

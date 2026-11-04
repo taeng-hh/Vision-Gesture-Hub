@@ -124,7 +124,8 @@ class GalagaGame:
 RunnerGame = GalagaGame
 
 
-def run_game(camera=0, model=None, pose_model=None):
+def run_game(camera=0, model=None, pose_model=None, window=None):
+    """window: reuse this open window (the translator's) instead of opening one."""
     from contextlib import ExitStack
     from pathlib import Path
     import time
@@ -134,6 +135,7 @@ def run_game(camera=0, model=None, pose_model=None):
     from core.sign_language_session import webcam_frame
     from core.auto_game_session import AutoGameSession
     from ksl.predict import Recognizer
+    from ui import theme
     from ui.mini_game_view import draw_galaga
 
     root = Path(__file__).resolve().parents[1]
@@ -147,7 +149,7 @@ def run_game(camera=0, model=None, pose_model=None):
     options = mp.tasks.vision.PoseLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_buffer=pose_model.read_bytes()),
         running_mode=mp.tasks.vision.RunningMode.VIDEO, num_poses=1)
-    title, cap = 'Sign Galaga', None
+    title, cap = window or theme.WINDOW_TITLE, None
     try:
         with ExitStack() as stack:
             detector = stack.enter_context(GestureDetector(root / 'models/gesture_recognizer.task'))
@@ -155,7 +157,8 @@ def run_game(camera=0, model=None, pose_model=None):
             cap = cv2.VideoCapture(camera)
             if not cap.isOpened(): raise RuntimeError('Camera unavailable')
             cv2.namedWindow(title, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(title, 1280, 860)
+            if window is None:
+                cv2.resizeWindow(title, theme.WIDTH, theme.HEIGHT)
             previous, timestamp = time.monotonic(), -1
             while True:
                 ok, raw = cap.read()
@@ -189,8 +192,9 @@ def run_game(camera=0, model=None, pose_model=None):
                     if action: game.action(action)
     finally:
         if cap is not None: cap.release()
-        try: cv2.destroyWindow(title)
-        except cv2.error: pass
+        if window is None:
+            try: cv2.destroyWindow(title)
+            except cv2.error: pass
 
 
 if __name__ == '__main__':
