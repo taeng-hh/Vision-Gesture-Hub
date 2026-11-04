@@ -34,8 +34,12 @@ class LiveTests(unittest.TestCase):
 
     def test_missing_pose_and_ambiguous_hands(self):
         self.assertIsNone(webcam_frame(Observation(), None, 640, 480))
+        # Ambiguous wrist matching keeps the shoulders but never assigns a hand.
         hand = Hand(tuple(Landmark(.5, .5, 0) for _ in range(21)))
-        self.assertIsNone(webcam_frame(Observation((hand,)), pose_points(), 640, 480))
+        f = webcam_frame(Observation((hand,)), pose_points(), 640, 480)
+        self.assertIsNotNone(f)
+        self.assertFalse(f[:42, 2].any())
+        self.assertTrue((f[[44, 47], 2] >= .5).all())
 
     def record(self, session, start):
         session.handle_key(ord(' '), start)
@@ -135,6 +139,8 @@ class MixedInputRecoveryTests(MixedTests):
     def test_long_tracking_gap_cancels(self):
         s=self.session([]);s.start(0);s.update(self.frame(),.1)
         s.update(None,.2);s.update(None,.85)
+        self.assertTrue(s.recording)  # Within max_tracking_gap (0.9 s).
+        s.update(None,1.15)
         self.assertFalse(s.recording)
         self.assertEqual(s.tokens,[])
 
@@ -149,4 +155,7 @@ class MixedInputRecoveryTests(MixedTests):
         s=self.session([]);s.start(0)
         for i,t in enumerate([0,.1,.2,.6]):
             f=self.frame();f[0,0]=100+t*100;s.update(f,t)
-        self.assertAlmostEqual(s.timed_frames()[1,0,0],120,places=3)
+        sampled=s.timed_frames()
+        self.assertEqual(sampled.shape,(s.sample_frames,67,3))
+        expected=100+np.linspace(0,.6,s.sample_frames)*100
+        np.testing.assert_allclose(sampled[:,0,0],expected,atol=1e-3)
