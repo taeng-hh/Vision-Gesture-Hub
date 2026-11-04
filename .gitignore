@@ -49,3 +49,10 @@ models/**
 !models/ksl30_robust_v2/classes.json
 !models/ksl30_robust_v2/metrics.json
 !models/ksl30_robust_v2/README.md
+!models/ksl30_robust_v2/provenance.json
+# Assisted RGB ensemble (seed GRUs). The MobileNet base weights are downloaded
+# by scripts/setup_assets.py and stay ignored.
+!models/rgb_ksl30/
+!models/rgb_ksl30/manifest.json
+!models/rgb_ksl30/seed*.pt
+models/**/*.download
