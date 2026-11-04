@@ -1,7 +1,7 @@
 # 팀원용: 한국수어 30클래스 설치부터 실행까지
 
 단어 23개와 문장 7개를 인식하는 실험용 기능입니다. 입력 모드를 따로 고르지 않고 학습 클래스의 유형으로 단어/문장을 구분합니다. 전체 자유 문장 번역은 아닙니다.
-기존 PC 제어·발표 제어 메뉴는 `main.py`로 실행하고, 아래 수어 기능은 `main.py --live-ksl`로 따로 실행합니다.
+`main.py`를 실행하면 아래 수어 번역 화면(키포인트 + CNN 보조)이 바로 열립니다. 이전 모드 선택 메뉴는 `main.py --hub`입니다.
 
 ## 1. 준비물
 
@@ -54,9 +54,7 @@ cd /d C:\CV_Project\Vision-Gesture-Hub
 py -3.11 -m venv .venv
 .venv\Scripts\python.exe -m pip install --upgrade pip
 .venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m pip install -r requirements-training.txt
-.venv\Scripts\python.exe scripts/download_model.py
-.venv\Scripts\python.exe scripts/download_pose_model.py
+.venv\Scripts\python.exe scripts/setup_assets.py
 ```
 
 이미 올바른 `.venv`가 있다면 다시 만들지 않아도 됩니다. 설치와 MediaPipe 모델 다운로드에는 인터넷이 필요합니다. 추론은 로컬에서 실행됩니다.
@@ -64,7 +62,7 @@ py -3.11 -m venv .venv
 ## 4. 웹캠 실행
 
 ```cmd
-.venv\Scripts\python.exe main.py --live-ksl
+.venv\Scripts\python.exe main.py
 ```
 
 또는 `수어인식실행.cmd`를 더블클릭합니다. 기본 모델은 `models/ksl30_robust_v2`입니다.
@@ -111,7 +109,7 @@ Git에 포함된 모델로 실행만 할 사람은 재학습하지 않아도 됩
 
 ```cmd
 .venv\Scripts\python.exe scripts/train_robust_ksl30.py --data data/ksl30_shared --output models/team_augmented
-.venv\Scripts\python.exe main.py --live-ksl --model models/team_augmented
+.venv\Scripts\python.exe main.py --legacy-ksl --model models/team_augmented
 ```
 
 증강 학습의 출력 폴더는 새 이름을 사용하세요. 기존 모델 폴더가 있으면 덮어쓰지 않고 중단합니다.

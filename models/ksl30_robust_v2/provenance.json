@@ -1,0 +1,12 @@
+{
+  "original_teammate_weights_used": true,
+  "repository": "https://github.com/taeng-hh/Vision-Gesture-Hub",
+  "commit": "609e3cfe82ca91b4b93d8e1fc2d7eb72accfb192",
+  "path": "models/ksl30_robust_v2/model.pt",
+  "model_sha256": "a947122ead740ada68f68c5e0bca881028cd071f1d1cc99afe53aad16decf8b9",
+  "source_recordings": 30,
+  "source_performer": "REAL01",
+  "synthetic_train_samples": 750,
+  "epochs": 180,
+  "warning": "Upstream synthetic checks are not independent validation."
+}

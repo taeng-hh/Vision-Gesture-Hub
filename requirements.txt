@@ -1,7 +1,15 @@
 # Python 3.11 recommended; install in a virtual environment.
 mediapipe>=0.10.20,<0.11
-opencv-python>=4.8,<5
+# Only the contrib build: mediapipe already depends on opencv-contrib-python, and
+# adding opencv-python as well installs two packages that overwrite the same cv2.
+opencv-contrib-python>=4.10,<5
 numpy>=1.26,<3
+
+# Sign recognition (keypoint GRU + MobileNetV3 RGB assist); CPU builds are enough.
+torch>=2.6,<3
+torchvision>=0.21,<1
+
+# Optional legacy hub (--hub) desktop control
 pyautogui>=0.9.54,<1
 
 # Korean subtitle rendering
