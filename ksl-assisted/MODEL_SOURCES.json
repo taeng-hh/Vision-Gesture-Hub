@@ -1,0 +1,23 @@
+{
+  "keypoint_source_commit": "609e3cfe82ca91b4b93d8e1fc2d7eb72accfb192",
+  "keypoint_sha256": "a947122ead740ada68f68c5e0bca881028cd071f1d1cc99afe53aad16decf8b9",
+  "rgb_training_groups": [
+    "REAL01",
+    "REAL02",
+    "REAL03",
+    "REAL04",
+    "REAL05",
+    "REAL06",
+    "REAL07",
+    "REAL08"
+  ],
+  "rgb_validation_group": "REAL09",
+  "rgb_seeds": [
+    17,
+    42,
+    73
+  ],
+  "rgb_keypoint_weight_legacy": 0.1,
+  "assisted_keypoint_weight": 0.8,
+  "webcam_accuracy_measured": false
+}

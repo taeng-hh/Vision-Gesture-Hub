@@ -1,0 +1,20 @@
+[
+  {
+    "path": "models/hand_landmarker.task",
+    "source": "models/hand_landmarker.task",
+    "url": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+    "sha256": "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
+  },
+  {
+    "path": "models/pose_landmarker_lite.task",
+    "source": "models/pose_landmarker_lite.task",
+    "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+    "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a"
+  },
+  {
+    "path": "models/rgb_ksl30/mobilenet_v3_small.pth",
+    "source": "models/rgb_ksl30/mobilenet_v3_small.pth",
+    "url": "https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth",
+    "sha256": "047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f"
+  }
+]
