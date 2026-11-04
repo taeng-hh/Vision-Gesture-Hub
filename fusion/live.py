@@ -42,6 +42,9 @@ class ClipRecorder:
         return clip
 
 
+CAMERA_GRACE_SECONDS=2.5  # Consecutive failed reads before giving up.
+
+
 def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
     """game: optional fusion.game_switch.GameSwitch (V hand shape -> Galaga)."""
     if mode not in MODE_LABELS:raise ValueError("Unknown recognition mode")
@@ -49,9 +52,24 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
     executor=ThreadPoolExecutor(max_workers=1);future=None;generation=0;future_generation=0
     tokens=[];sentence="";components="";quality_text="";message="Space로 시작하고 단어 또는 문장 하나를 수행하세요."
     last_result=None;preview_rois=None;last_clip=None;future_append=True
-    event=None;debug=False
+    event=None;event_at=None;debug=False;recent=[];history=[]
+    last_display=None;fail_since=None;reopened=False
     names={c["class_id"]:c["text"] for c in model.classes}
     compose=type("Composition",(),{})();compose.tokens=tokens;compose.names=names
+    def view_state(display,now,snapshot,status,**extra):
+        """Everything the screen shows, read from the loop's current values."""
+        debug_lines=("판정 모드: "+MODE_LABELS[mode]+" / 30클래스",
+                     f"출력 기준: 점수 {getattr(model,'min_score',.75):.2f} / 차이 {getattr(model,'min_margin',.15):.2f}",
+                     *(components.split(" | ") if components else ()),*((quality_text,) if quality_text else ()),
+                     *((f"입력 {len(recorder.frames)}프레임",) if recorder.recording else ()))
+        return TranslatorState(camera=display,now=now,status=status,
+                               elapsed=now-recorder.started if recorder.recording else 0.,record_limit=recorder.max_seconds,
+                               event=event,event_age=None if event_at is None else now-event_at,message=message,
+                               tokens=tuple(names[t] for t in tokens),sentence=sentence,history=tuple(history),recent=tuple(recent),
+                               **tracking_state(snapshot,now),
+                               game_progress=None if game is None or game.error else game.progress,
+                               game_note=(game.error or "") if game is not None else "게임 전환 꺼짐 (--no-game)",
+                               debug=debug,debug_lines=debug_lines,rois=preview_rois,**extra)
     def analyze(clip,selected_mode):
         return analyze_clip(model,assets,clip,selected_mode,reuse_live=reuse_live)
     cap=cv2.VideoCapture(camera);tracker=None
@@ -64,14 +82,30 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
         cv2.resizeWindow(window,theme.WIDTH,theme.HEIGHT)
         while True:
             ok,raw=cap.read()
-            if not ok:raise RuntimeError("카메라 입력이 중단됐습니다.")
             now=time.monotonic()
+            if not ok:
+                # Webcams drop frames briefly (start-up, other apps); only give up after a grace period.
+                if fail_since is None:fail_since=now;reopened=False
+                if recorder.recording:
+                    recorder.cancel();tracker.set_max_fps(12);message="카메라 입력이 끊겨 녹화를 취소했습니다. Space로 다시 시작하세요."
+                if now-fail_since>CAMERA_GRACE_SECONDS:raise RuntimeError("카메라 입력이 중단됐습니다.")
+                if now-fail_since>1. and not reopened:
+                    reopened=True;cap.release()
+                    if cap.open(camera):cap.set(cv2.CAP_PROP_FRAME_WIDTH,1280);cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
+                cv2.imshow(window,draw_translator(view_state(last_display,now,None,"reconnecting",camera_note="카메라 다시 연결 중…")))
+                key=cv2.waitKey(30)&0xff
+                if key in (ord("q"),ord("Q"),27):break
+                continue
+            fail_since=None
             tracker.submit(raw,now)
             snapshot=tracker.snapshot()
             try:recorder.update(raw,now,snapshot)
             except ValueError as exc:tracker.set_max_fps(12);message=str(exc)
             if game is not None and game.update(raw,now,recording=recorder.recording):
-                # The game opens its own capture; hand the camera over and take it back.
+                # Short hand-off card, then the game opens its own capture in the same window.
+                cv2.imshow(window,draw_translator(view_state(last_display if last_display is not None else cv2.flip(raw,1),now,snapshot,"ready",
+                                                             overlay=("SIGN GALAGA로 이동합니다","게임에서 Q 또는 Esc를 누르면 번역 화면으로 돌아옵니다"))))
+                cv2.waitKey(400)
                 cap.release()
                 message=game.launch(window=window)
                 if not cap.open(camera):raise RuntimeError("게임 후 카메라를 다시 열 수 없습니다.")
@@ -113,10 +147,13 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
                                candidates=[(a["text"],a["score"]) for a in result.get("alternatives",())])
                     if result["accepted"]:
                         if not future_append:pass
-                        elif result["kind"]=="sentence":
-                            tokens.clear();sentence=result["text"]
-                        elif len(tokens)<12:
-                            tokens.append(result["class_id"]);sentence=MixedLiveSignSession.compose(compose)
+                        else:
+                            event_at=now;recent.insert(0,(result["text"],result["score"]));del recent[3:]
+                            if result["kind"]=="sentence":
+                                if sentence and sentence!=result["text"]:history.append(sentence);del history[:-2]
+                                tokens.clear();sentence=result["text"]
+                            elif len(tokens)<12:
+                                tokens.append(result["class_id"]);sentence=MixedLiveSignSession.compose(compose)
                         message=f"{MODE_LABELS[mode]}: {result['text']} · {result['score']:.2f} · 분석 {last_result['analysis_seconds']:.2f}초"
                     else:message=f"{MODE_LABELS[mode]} 인식 보류: {names.get(result['candidate_id'],'입력 없음')} · 점수 {result['score']:.2f} · 차이 {result['margin']:.2f}"
                 except (ValueError,RuntimeError) as exc:message="분석 실패: "+str(exc)
@@ -124,17 +161,9 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
             snapshot=tracker.snapshot()
             display=cv2.flip(raw,1)
             draw_skeleton(display,snapshot,now,mirror=True)
-            debug_lines=("판정 모드: "+MODE_LABELS[mode]+" / 30클래스",
-                         f"출력 기준: 점수 {getattr(model,'min_score',.75):.2f} / 차이 {getattr(model,'min_margin',.15):.2f}",
-                         *(components.split(" | ") if components else ()),*((quality_text,) if quality_text else ()),
-                         *((f"입력 {len(recorder.frames)}프레임",) if recorder.recording else ()))
-            view=TranslatorState(camera=display,now=now,status="recording" if recorder.recording else "analyzing" if future else "ready",
-                                 elapsed=now-recorder.started if recorder.recording else 0.,event=event,message=message,
-                                 tokens=tuple(names[t] for t in tokens),sentence=sentence,**tracking_state(snapshot,now),
-                                 game_progress=None if game is None or game.error else game.progress,
-                                 game_note=(game.error or "") if game is not None else "게임 전환 꺼짐 (--no-game)",
-                                 debug=debug,debug_lines=debug_lines,rois=preview_rois)
-            cv2.imshow(window,draw_translator(view))
+            last_display=display
+            status="recording" if recorder.recording else "analyzing" if future else "ready"
+            cv2.imshow(window,draw_translator(view_state(display,now,snapshot,status)))
             key=cv2.waitKey(1)&0xff
             if key in (ord("q"),ord("Q"),27):break
             if cv2.getWindowProperty(window,cv2.WND_PROP_VISIBLE)<1:break
@@ -165,7 +194,10 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
                     tracker.set_max_fps(30);recorder.start(now);message="입력 중: 동작을 마치면 Space를 누르세요."
             elif key in (ord("d"),ord("D")):debug=not debug
             elif key in (ord("c"),ord("C")):
-                generation+=1;recorder.cancel();tokens.clear();sentence="";components="";quality_text="";last_result=None;preview_rois=None;last_clip=None;future_append=True;tracker.set_max_fps(12);message="초기화했습니다.";event=None
+                # First C keeps the finished sentence above the subtitle; C on an empty subtitle clears everything.
+                if sentence:history.append(sentence);del history[:-2];message="다음 문장을 시작합니다."
+                else:history.clear();recent.clear();message="초기화했습니다."
+                generation+=1;recorder.cancel();tokens.clear();sentence="";components="";quality_text="";last_result=None;preview_rois=None;last_clip=None;future_append=True;tracker.set_max_fps(12);event=None;event_at=None
             elif key in (8,127):
                 generation+=1;recorder.cancel();tracker.set_max_fps(12)
                 if tokens:tokens.pop()

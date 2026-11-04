@@ -108,8 +108,10 @@ class RunCameraGameTests(unittest.TestCase):
         game.launch.assert_called_once_with(window='Sign Translator')  # Same window as the translator.
         cap.open.assert_called_once_with(3)
         self.assertEqual(cap.release.call_count, 2)  # Before the game and on exit.
-        self.assertEqual(views[0].game_progress, .5)
-        self.assertEqual(views[0].message, 'back')
+        self.assertIn('GALAGA', views[0].overlay[0])  # Hand-off card before the game opens.
+        self.assertIsNone(views[-1].overlay)
+        self.assertEqual(views[-1].game_progress, .5)
+        self.assertEqual(views[-1].message, 'back')
         self.assertFalse(game.update.call_args_list[0].kwargs['recording'])
 
 
