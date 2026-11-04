@@ -1,0 +1,28 @@
+{
+  "repository": "https://github.com/taeng-hh/Vision-Gesture-Hub",
+  "code_base_commit": "44df9d5f70d310f5272f0ead68f1a0893f4333bb",
+  "model_commit": "609e3cfe82ca91b4b93d8e1fc2d7eb72accfb192",
+  "upstream_weights_included": true,
+  "default_keypoint_model": "models/ksl30_robust_v2",
+  "default_keypoint_weight": 0.1,
+  "model_sha256": "a947122ead740ada68f68c5e0bca881028cd071f1d1cc99afe53aad16decf8b9",
+  "compatible_model_preserved": "models/ksl30_fusion_video",
+  "default_decision_mode": "assisted",
+  "configured_fusion_keypoint_weight": 0.1,
+  "decision_modes": [
+    "assisted",
+    "keypoint",
+    "rgb",
+    "fusion"
+  ],
+  "rgb_lazy_load": true,
+  "live_landmarks_reused_for_keypoint": true,
+  "branch_execution": "selected mode only",
+  "speed_tests_passed": 64,
+  "assisted_keypoint_weight": 0.8,
+  "cnn_policy": "Only corroborate uncertain keypoint candidates",
+  "assisted_policy_tests_passed": 77,
+  "model_weights_changed": false,
+  "publication_folder": "ksl-assisted",
+  "publication_date": "2026-11-04"
+}
