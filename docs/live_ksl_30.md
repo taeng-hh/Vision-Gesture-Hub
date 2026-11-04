@@ -3,7 +3,7 @@
 프로젝트 폴더에서 실행:
 
 ```cmd
-.venv\Scripts\python.exe main.py --live-ksl
+.venv\Scripts\python.exe main.py
 ```
 
 수어인식실행.cmd를 더블클릭해도 됩니다. 기본 모델은 models/ksl30_robust_v2입니다. 가중치와 클래스 정보가 Git에 포함되어 별도 데이터 없이 실행할 수 있습니다.

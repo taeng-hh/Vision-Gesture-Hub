@@ -1,3 +1,5 @@
+> **보관용 원문 (2026-11-04 병합).** 이 폴더는 `ksl-assisted/` 독립본의 설명과 출처 기록입니다. 이제 엔진은 루트 `fusion/`으로 합쳐졌고, 실행·설치·테스트 방법은 [루트 README](../../README.md)를 따릅니다(`python main.py`, `pip install -r requirements.txt`, `python scripts/setup_assets.py`). 아래의 `setup.cmd`, `run.cmd`, `requirements-fusion.txt`, `tests.test_live_sign`은 더 이상 존재하지 않습니다. `PUBLICATION_MANIFEST.json`의 해시는 병합 전 독립본 기준입니다.
+
 # 키포인트 주판정 + CNN 보조 수어 인식 사본
 
 기존 Vision-Gesture-Hub와 분리된 독립 실행 폴더입니다. Python 3.11·OpenCV·MediaPipe·PyTorch를 사용하고 단어 23개·문장 7개를 인식합니다.
