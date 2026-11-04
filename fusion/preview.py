@@ -124,10 +124,10 @@ def draw_skeleton(frame,snapshot,now,mirror=True):
     def draw(points,edges,color,confidence=False):
         coords=[point(p) if not confidence or p[2]>=.5 else None for p in points]
         for a,b in edges:
-            if a<len(coords) and b<len(coords) and coords[a] is not None and coords[b] is not None:cv2.line(frame,coords[a],coords[b],color,2,cv2.LINE_AA)
+            if a<len(coords) and b<len(coords) and coords[a] is not None and coords[b] is not None:cv2.line(frame,coords[a],coords[b],color,3,cv2.LINE_AA)
         selected=BODY_POINTS if confidence else range(len(points))
         for i in selected:
-            if i<len(coords) and coords[i] is not None:cv2.circle(frame,coords[i],4 if confidence else 3,color,-1,cv2.LINE_AA)
+            if i<len(coords) and coords[i] is not None:cv2.circle(frame,coords[i],5 if confidence else 4,color,-1,cv2.LINE_AA)
     if snapshot.pose:draw(snapshot.pose,BODY_EDGES,BODY_COLOR,True)
     for i,hand in enumerate(snapshot.hands):draw(hand,HAND_EDGES,HAND_COLORS[i%2])
     return frame

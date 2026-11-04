@@ -53,6 +53,35 @@ def font(size):
     return get_font().font_variant(size=size)
 
 
+@lru_cache(maxsize=1)
+def _bold_base():
+    """Bold Hangul face if one is installed; falls back to the regular font."""
+    import os
+    from pathlib import Path
+    from PIL import ImageFont
+    for path in (os.environ.get('KSL_FONT_BOLD', ''), 'C:/Windows/Fonts/malgunbd.ttf',
+                 '/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf',
+                 '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc'):
+        if path and Path(path).is_file():
+            return ImageFont.truetype(path, 18)
+    regular = get_font()
+    path = getattr(regular, 'path', '')
+    if str(path).lower().endswith('.ttc'):  # e.g. macOS Apple SD Gothic Neo.
+        for index in range(32):
+            try:
+                face = ImageFont.truetype(path, 18, index=index)
+            except OSError:
+                break
+            if face.getname()[1] == 'Bold':
+                return face
+    return regular
+
+
+@lru_cache(maxsize=12)
+def bold(size):
+    return _bold_base().font_variant(size=size)
+
+
 def card(draw, box, fill=CARD, outline=CARD_BORDER, radius=RADIUS, width=1):
     draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 

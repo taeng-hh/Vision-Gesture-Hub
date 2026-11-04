@@ -58,8 +58,13 @@ def states(camera):
                                                 message='입력 중: 동작을 마치면 Space를 누르세요.', tokens=('나',), sentence='나'),
         'translator_analyzing': TranslatorState(**base, status='analyzing', message='키포인트+CNN보조 분석 중입니다.',
                                                 tokens=('나',), sentence='나'),
-        'translator_word': TranslatorState(**{**base, 'game_progress': .55}, event=word, tokens=('나', '행복'), sentence='저는 행복해요.',
+        'translator_word': TranslatorState(**{**base, 'game_progress': .55}, event=word, event_age=5., tokens=('나', '행복'),
+                                           sentence='저는 행복해요.', history=('안녕하세요.', '밥을 주세요.'),
+                                           recent=(('행복', .91), ('나', .88), ('밥을 주세요.', .83)),
                                            message='키포인트+CNN보조: 행복 · 0.91 · 분석 0.18초'),
+        'translator_word_flash': TranslatorState(**base, event=word, event_age=.05, tokens=('나', '행복'), sentence='저는 행복해요.',
+                                                 recent=(('행복', .91), ('나', .88)),
+                                                 message='키포인트+CNN보조: 행복 · 0.91 · 분석 0.18초'),
         'translator_retry': TranslatorState(**{**base, 'hands': 1, 'keypoints': False}, tracking_note='손과 양어깨 위치를 함께 확인하세요',
                                             event=dict(accepted=False, kind=None, text='감사', score=.58,
                                                        candidates=[('감사', .58), ('죄송', .31), ('부탁', .05)]),
@@ -69,6 +74,11 @@ def states(camera):
                                             debug_lines=('판정 모드: 키포인트+CNN보조 / 30클래스', '출력 기준: 점수 0.75 / 차이 0.15',
                                                          '키포인트: 행복 0.71', '영상: 행복 0.88', 'CNN 후보 일치 확인'),
                                             rois=rois, message='키포인트+CNN보조: 행복 · 0.91 · 분석 0.62초'),
+        'translator_game_handoff': TranslatorState(**{**base, 'game_progress': 1.}, tokens=('나',), sentence='나',
+                                                   overlay=('SIGN GALAGA로 이동합니다', '게임에서 Q 또는 Esc를 누르면 번역 화면으로 돌아옵니다')),
+        'translator_reconnecting': TranslatorState(**{**base, 'hands': 0, 'shoulders': False, 'keypoints': False},
+                                                   status='reconnecting', camera_note='카메라 다시 연결 중…',
+                                                   message='카메라 입력이 끊겨 녹화를 취소했습니다. Space로 다시 시작하세요.'),
     }
 
 
