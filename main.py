@@ -1,4 +1,10 @@
-"""Entry point: camera -> shared detector -> one active mode -> optional OS action."""
+"""Entry point.
+
+python main.py               sign translator (keypoint GRU + CNN assist, fusion/)
+python main.py --legacy-ksl  previous keypoint-only GRU screen
+python main.py --runner      Sign Galaga directly
+python main.py --hub         old mode menu
+"""
 import argparse
 import time
 from pathlib import Path
@@ -12,11 +18,18 @@ def main():
         sys.argv.remove("--runner")
         import runpy
         return runpy.run_module("modes.mini_game", run_name="__main__")
-    if "--hub" not in sys.argv:
-        if "--live-ksl" in sys.argv:
-            sys.argv.remove("--live-ksl")
+    if "--legacy-ksl" in sys.argv:
+        # Previous keypoint-only GRU screen (sign_language_webcam.py).
+        sys.argv.remove("--legacy-ksl")
         from sign_language_webcam import main as run_sign_language_webcam
         return run_sign_language_webcam()
+    if "--hub" not in sys.argv:
+        # Default: keypoint-first sign translator with CNN assistance and the
+        # V hand shape -> Galaga shortcut. --live-ksl is kept as an old alias.
+        if "--live-ksl" in sys.argv:
+            sys.argv.remove("--live-ksl")
+        from fusion.cli import main as run_sign_translator
+        return run_sign_translator()
     sys.argv.remove("--hub")
     # Load desktop-control dependencies only for the optional legacy hub.
     import cv2

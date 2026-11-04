@@ -40,7 +40,8 @@ class ClipRecorder:
         return clip
 
 
-def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True):
+def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
+    """game: optional fusion.game_switch.GameSwitch (V hand shape -> Galaga)."""
     if mode not in MODE_LABELS:raise ValueError("Unknown recognition mode")
     cropper=SharedExtractor(assets);recorder=ClipRecorder()
     executor=ThreadPoolExecutor(max_workers=1);future=None;generation=0;future_generation=0
@@ -66,6 +67,16 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True):
             snapshot=tracker.snapshot()
             try:recorder.update(raw,now,snapshot)
             except ValueError as exc:tracker.set_max_fps(12);message=str(exc)
+            if game is not None and game.update(raw,now,recording=recorder.recording):
+                # The game opens its own capture; hand the camera over and take it back.
+                cap.release()
+                try:cv2.destroyWindow(window)
+                except cv2.error:pass
+                message=game.launch()
+                if not cap.open(camera):raise RuntimeError("게임 후 카메라를 다시 열 수 없습니다.")
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH,1280);cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
+                cv2.namedWindow(window,cv2.WINDOW_NORMAL);cv2.resizeWindow(window,1280,600)
+                continue
             if future is not None and future.done() and future_generation!=generation:
                 future=None
             if future is not None and future.done():
@@ -111,7 +122,8 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True):
                         (12,30),cv2.FONT_HERSHEY_SIMPLEX,.8,(0,0,255) if recorder.recording else (0,220,100),2)
             lines=["판정 모드: "+MODE_LABELS[mode]+" / 30클래스",
                    "손1: 초록 · 손2: 노랑 · 상체: 하늘",*tracking_status(snapshot,now),"",
-                   state,"1: 키포인트 / 2: 영상 / 3: CNN보조","Space: 입력 시작/완료","C: 초기화 · Backspace: 삭제 · Q: 종료","",message]
+                   state,"1: 키포인트 / 2: 영상 / 3: CNN보조","Space: 입력 시작/완료","C: 초기화 · Backspace: 삭제 · Q: 종료",
+                   *(game.lines(recorder.recording) if game is not None else ()),"",message]
             lines.extend(components.split(" | ") if components else [])
             lines.extend((["아래 3칸: 최근 입력의 중간 장면"] if preview_rois is not None else [])+[quality_text,"출력 기준: 점수 0.75 / 차이 0.15",
                           "단어: "+" · ".join(names[t] for t in tokens),"출력: "+sentence])

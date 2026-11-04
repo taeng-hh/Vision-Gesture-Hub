@@ -23,6 +23,18 @@ class PreviewTests(unittest.TestCase):
         self.assertFalse(snapshot.shoulders_ok);self.assertFalse(snapshot.keypoint_ok)
         text=' '.join(tracking_status(snapshot,1))
         self.assertIn('손 검출: 0/2',text);self.assertIn('상반신',text)
+    def test_unmatched_hands_are_not_reused_as_handless_live_frames(self):
+        def pose_points():
+            points=[SimpleNamespace(x=.5,y=.5,visibility=1.,presence=1.) for _ in range(33)]
+            points[11].x,points[12].x=.7,.3;points[15].x,points[16].x=.8,.2
+            return SimpleNamespace(pose_landmarks=[points])
+        hand=lambda x:[SimpleNamespace(x=x+i*.002,y=.5+i*.002) for i in range(21)]
+        matched=snapshot_from_results(SimpleNamespace(hand_landmarks=[hand(.8)]),pose_points(),640,480,1)
+        self.assertTrue(matched.keypoint_ok);self.assertEqual(matched.keypoints[0,2],1)
+        ambiguous=snapshot_from_results(SimpleNamespace(hand_landmarks=[hand(.5)]),pose_points(),640,480,1)
+        self.assertIsNone(ambiguous.keypoints);self.assertFalse(ambiguous.keypoint_ok)
+        handless=snapshot_from_results(SimpleNamespace(hand_landmarks=[]),pose_points(),640,480,1)
+        self.assertIsNotNone(handless.keypoints);self.assertFalse(handless.keypoints[:42,2].any())
     def test_error_is_reported_and_no_invalid_skeleton_is_drawn(self):
         snapshot=TrackingSnapshot(1,error='test detector failure');image=np.zeros((100,200,3),np.uint8)
         draw_skeleton(image,snapshot,1)
