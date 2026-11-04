@@ -8,12 +8,13 @@ import cv2
 import numpy as np
 from core.sign_language_session import webcam_frame
 from ui.ksl_overlay import get_font
+from ui import theme
 
 HAND_EDGES=((0,1),(1,2),(2,3),(3,4),(0,5),(5,6),(6,7),(7,8),(5,9),(9,10),(10,11),(11,12),(9,13),(13,14),(14,15),(15,16),(13,17),(17,18),(18,19),(19,20),(0,17))
 BODY_EDGES=((11,12),(11,13),(13,15),(12,14),(14,16),(11,23),(12,24),(23,24))
 BODY_POINTS=(11,12,13,14,15,16,23,24)
-HAND_COLORS=((40,230,80),(0,220,255))
-BODY_COLOR=(255,200,30)
+HAND_COLORS=(theme.bgr(theme.ACCENT),theme.bgr(theme.WARNING))  # Hand 1 mint, hand 2 yellow.
+BODY_COLOR=theme.bgr(theme.SKY)
 
 @dataclass(frozen=True)
 class TrackingSnapshot:
@@ -101,6 +102,15 @@ def tracking_status(snapshot,now):
     elif not snapshot.hands:lines.append('손을 카메라에 보여주세요')
     else:lines.append('손과 양어깨 위치를 함께 확인하세요')
     return lines
+
+
+def tracking_state(snapshot,now):
+    """Short tracking summary for the translator screen (see tracking_status)."""
+    if snapshot is None:return dict(hands=0,shoulders=False,keypoints=False,tracking_note='손/상체 추적 준비 중...')
+    if snapshot.error:return dict(hands=0,shoulders=False,keypoints=False,tracking_note='추적 오류: '+snapshot.error)
+    if now-snapshot.captured_at>.75:return dict(hands=0,shoulders=False,keypoints=False,tracking_note='추적 갱신 대기 · 현재 위치 미확인')
+    note='' if snapshot.keypoint_ok else '손을 카메라에 보여주세요' if not snapshot.hands else '상반신을 보여주세요' if not snapshot.shoulders_ok else '손과 양어깨 위치를 함께 확인하세요'
+    return dict(hands=len(snapshot.hands),shoulders=snapshot.shoulders_ok,keypoints=snapshot.keypoint_ok,tracking_note=note)
 
 
 def draw_skeleton(frame,snapshot,now,mirror=True):

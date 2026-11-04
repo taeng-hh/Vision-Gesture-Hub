@@ -90,7 +90,8 @@ class RunCameraGameTests(unittest.TestCase):
         game = MagicMock()
         game.update.side_effect = [True, False, False]
         game.launch.return_value = 'back'
-        game.lines.return_value = ['V line']
+        game.error = None
+        game.progress = .5
         model = SimpleNamespace(classes=[dict(class_id='A', text='a')])
         views = []
         with ExitStack() as st:
@@ -101,14 +102,14 @@ class RunCameraGameTests(unittest.TestCase):
                 st.enter_context(patch('fusion.live.cv2.' + name))
             st.enter_context(patch('fusion.live.cv2.getWindowProperty', return_value=1))
             st.enter_context(patch('fusion.live.cv2.waitKey', side_effect=[-1, ord('q')]))
-            st.enter_context(patch('fusion.live.diagnostic_view',
-                                   side_effect=lambda frame, lines, rois: views.append(lines) or frame))
+            st.enter_context(patch('fusion.live.draw_translator',
+                                   side_effect=lambda state: views.append(state) or state.camera))
             run_camera(model, '.', camera=3, game=game)
-        game.launch.assert_called_once()
+        game.launch.assert_called_once_with(window='Sign Translator')  # Same window as the translator.
         cap.open.assert_called_once_with(3)
         self.assertEqual(cap.release.call_count, 2)  # Before the game and on exit.
-        self.assertIn('V line', views[0])
-        self.assertIn('back', views[0])
+        self.assertEqual(views[0].game_progress, .5)
+        self.assertEqual(views[0].message, 'back')
         self.assertFalse(game.update.call_args_list[0].kwargs['recording'])
 
 

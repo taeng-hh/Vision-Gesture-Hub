@@ -4,7 +4,9 @@ from pathlib import Path
 import time
 import cv2
 import numpy as np
-from .preview import PreviewTracker,draw_skeleton,tracking_status,diagnostic_view
+from .preview import PreviewTracker,draw_skeleton,tracking_state
+from ui import theme
+from ui.translator_view import TranslatorState,draw_translator
 from core.sign_language_session import MixedLiveSignSession
 from .shared import FrameClip,SharedExtractor
 from .predict import select_prediction,MODE_LABELS
@@ -47,6 +49,7 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
     executor=ThreadPoolExecutor(max_workers=1);future=None;generation=0;future_generation=0
     tokens=[];sentence="";components="";quality_text="";message="Space로 시작하고 단어 또는 문장 하나를 수행하세요."
     last_result=None;preview_rois=None;last_clip=None;future_append=True
+    event=None;debug=False
     names={c["class_id"]:c["text"] for c in model.classes}
     compose=type("Composition",(),{})();compose.tokens=tokens;compose.names=names
     def analyze(clip,selected_mode):
@@ -56,9 +59,9 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
         if not cap.isOpened():raise RuntimeError("카메라를 열 수 없습니다. --camera 1을 시도하세요.")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH,1280);cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
         tracker=PreviewTracker(assets)
-        window="KSL - Keypoint + RGB Fusion"
+        window=theme.WINDOW_TITLE  # Shared with the game, which draws into the same window.
         cv2.namedWindow(window,cv2.WINDOW_NORMAL)
-        cv2.resizeWindow(window,1280,600)
+        cv2.resizeWindow(window,theme.WIDTH,theme.HEIGHT)
         while True:
             ok,raw=cap.read()
             if not ok:raise RuntimeError("카메라 입력이 중단됐습니다.")
@@ -70,12 +73,13 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
             if game is not None and game.update(raw,now,recording=recorder.recording):
                 # The game opens its own capture; hand the camera over and take it back.
                 cap.release()
-                try:cv2.destroyWindow(window)
-                except cv2.error:pass
-                message=game.launch()
+                message=game.launch(window=window)
                 if not cap.open(camera):raise RuntimeError("게임 후 카메라를 다시 열 수 없습니다.")
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH,1280);cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
-                cv2.namedWindow(window,cv2.WINDOW_NORMAL);cv2.resizeWindow(window,1280,600)
+                try:closed=cv2.getWindowProperty(window,cv2.WND_PROP_VISIBLE)<1
+                except cv2.error:closed=True
+                if closed:  # Closing the game window returns to the translator, as before.
+                    cv2.namedWindow(window,cv2.WINDOW_NORMAL);cv2.resizeWindow(window,theme.WIDTH,theme.HEIGHT)
                 continue
             if future is not None and future.done() and future_generation!=generation:
                 future=None
@@ -104,6 +108,9 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
                     if mode=="assisted":
                         status_labels={"keypoint_confident":"키포인트 확정 · CNN 미실행","cnn_confirmed":"CNN 후보 일치 확인","cnn_disagrees":"CNN 후보 불일치 · 보류","cnn_uncertain":"CNN도 불확실 · 보류","still_uncertain":"두 모델 확인 후에도 보류","cnn_unavailable":"CNN 확인 불가 · 보류"}
                         quality_text=status_labels.get(result.get("assist_status"),"키포인트 우선 판정")
+                    event=dict(accepted=result["accepted"],kind=result["kind"],score=result["score"],
+                               text=result["text"] if result["accepted"] else names.get(result["candidate_id"],""),
+                               candidates=[(a["text"],a["score"]) for a in result.get("alternatives",())])
                     if result["accepted"]:
                         if not future_append:pass
                         elif result["kind"]=="sentence":
@@ -117,17 +124,17 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
             snapshot=tracker.snapshot()
             display=cv2.flip(raw,1)
             draw_skeleton(display,snapshot,now,mirror=True)
-            state=f"입력 중 {now-recorder.started:.1f}초 · {len(recorder.frames)}프레임" if recorder.recording else "모델 분석 중" if future else "입력 대기"
-            cv2.putText(display,"REC" if recorder.recording else "ANALYZING" if future else "READY",
-                        (12,30),cv2.FONT_HERSHEY_SIMPLEX,.8,(0,0,255) if recorder.recording else (0,220,100),2)
-            lines=["판정 모드: "+MODE_LABELS[mode]+" / 30클래스",
-                   "손1: 초록 · 손2: 노랑 · 상체: 하늘",*tracking_status(snapshot,now),"",
-                   state,"1: 키포인트 / 2: 영상 / 3: CNN보조","Space: 입력 시작/완료","C: 초기화 · Backspace: 삭제 · Q: 종료",
-                   *(game.lines(recorder.recording) if game is not None else ()),"",message]
-            lines.extend(components.split(" | ") if components else [])
-            lines.extend((["아래 3칸: 최근 입력의 중간 장면"] if preview_rois is not None else [])+[quality_text,"출력 기준: 점수 0.75 / 차이 0.15",
-                          "단어: "+" · ".join(names[t] for t in tokens),"출력: "+sentence])
-            cv2.imshow(window,diagnostic_view(display,lines,preview_rois))
+            debug_lines=("판정 모드: "+MODE_LABELS[mode]+" / 30클래스",
+                         f"출력 기준: 점수 {getattr(model,'min_score',.75):.2f} / 차이 {getattr(model,'min_margin',.15):.2f}",
+                         *(components.split(" | ") if components else ()),*((quality_text,) if quality_text else ()),
+                         *((f"입력 {len(recorder.frames)}프레임",) if recorder.recording else ()))
+            view=TranslatorState(camera=display,now=now,status="recording" if recorder.recording else "analyzing" if future else "ready",
+                                 elapsed=now-recorder.started if recorder.recording else 0.,event=event,message=message,
+                                 tokens=tuple(names[t] for t in tokens),sentence=sentence,**tracking_state(snapshot,now),
+                                 game_progress=None if game is None or game.error else game.progress,
+                                 game_note=(game.error or "") if game is not None else "게임 전환 꺼짐 (--no-game)",
+                                 debug=debug,debug_lines=debug_lines,rois=preview_rois)
+            cv2.imshow(window,draw_translator(view))
             key=cv2.waitKey(1)&0xff
             if key in (ord("q"),ord("Q"),27):break
             if cv2.getWindowProperty(window,cv2.WND_PROP_VISIBLE)<1:break
@@ -156,8 +163,9 @@ def run_camera(model,assets,camera=0,mode="assisted",reuse_live=True,game=None):
                 else:
                     last_clip=None;last_result=None;preview_rois=None;components=""
                     tracker.set_max_fps(30);recorder.start(now);message="입력 중: 동작을 마치면 Space를 누르세요."
+            elif key in (ord("d"),ord("D")):debug=not debug
             elif key in (ord("c"),ord("C")):
-                generation+=1;recorder.cancel();tokens.clear();sentence="";components="";quality_text="";last_result=None;preview_rois=None;last_clip=None;future_append=True;tracker.set_max_fps(12);message="초기화했습니다."
+                generation+=1;recorder.cancel();tokens.clear();sentence="";components="";quality_text="";last_result=None;preview_rois=None;last_clip=None;future_append=True;tracker.set_max_fps(12);message="초기화했습니다.";event=None
             elif key in (8,127):
                 generation+=1;recorder.cancel();tracker.set_max_fps(12)
                 if tokens:tokens.pop()
