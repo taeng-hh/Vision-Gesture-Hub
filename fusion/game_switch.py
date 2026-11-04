@@ -45,13 +45,17 @@ class GameSwitch:
         observation = self.detector.detect(small, int(now*1000))
         return self.launcher.update(observation, now, recording=recording)
 
-    def launch(self):
-        """Run the game (blocking); the caller must release its camera first."""
+    def launch(self, window=None):
+        """Run the game (blocking); the caller must release its camera first.
+
+        window: an open OpenCV window for the game to draw into (keeps one window).
+        """
         run_game = self._run_game
         if run_game is None:
             from modes.mini_game import run_game
         try:
-            run_game(self.camera, self.keypoint_model, self.assets / 'pose_landmarker_lite.task')
+            extra = (window,) if window else ()
+            run_game(self.camera, self.keypoint_model, self.assets / 'pose_landmarker_lite.task', *extra)
             return '수어 번역으로 돌아왔습니다. Space로 입력하세요.'
         except (FileNotFoundError, RuntimeError) as exc:
             return f'미니게임 실행 실패: {exc}'
