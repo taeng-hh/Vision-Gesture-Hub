@@ -1,36 +1,23 @@
 ﻿"""Retro space shooter dashboard with Korean sign controls."""
-from functools import lru_cache
 import numpy as np
 from PIL import Image, ImageDraw
-from ui.ksl_overlay import get_font
-
-
-@lru_cache(maxsize=12)
-def font(size):
-    return get_font().font_variant(size=size)
+from ui import theme
+from ui.theme import font  # Kept importable from here for older callers.
 
 
 def draw_galaga(game, camera, session, tracking):
-    image = Image.new('RGB', (1280, 860), '#080c20')
+    image = Image.new('RGB', (theme.WIDTH, theme.HEIGHT), theme.BACKGROUND)
     draw = ImageDraw.Draw(image)
-    white, muted, mint = '#edf3ff', '#9aaaca', '#65edc2'
+    white, muted, mint = theme.TEXT, theme.MUTED, theme.ACCENT
 
     def text(x, y, value, size=18, color=white):
         draw.text((x, y), str(value), font=font(size), fill=color)
 
-    def card(box, fill='#121b32', outline='#2b4264'):
-        draw.rounded_rectangle(box, radius=14, fill=fill, outline=outline)
+    def card(box, fill=theme.CARD, outline=theme.CARD_BORDER):
+        theme.card(draw, box, fill, outline)
 
     def wrapped(value, x, y, width, size=16, max_lines=2):
-        lines, line = [], ''
-        for char in str(value):
-            if draw.textlength(line+char, font=font(size)) > width:
-                lines.append(line)
-                line = ''
-            line += char
-        lines.append(line)
-        for i, line in enumerate(lines[:max_lines]):
-            text(x, y+i*(size+7), line, size, muted)
+        theme.wrapped_text(draw, value, x, y, width, size, muted, max_lines)
 
     text(32, 22, 'SIGN / GALAGA', 30)
     text(34, 66, '수화로 조종하는 레트로 우주 슈팅', 16, muted)
@@ -41,7 +28,7 @@ def draw_galaga(game, camera, session, tracking):
         text(x+16, 29, label, 12, muted)
         text(x+16, 50, value, 22, mint)
 
-    card((28, 116, 858, 690), '#030715')
+    card((28, 116, 858, 690), theme.CARD_DEEP)
     text(50, 130, 'GALACTIC PATROL', 13, muted)
     text(580, 130, 'AUTO FIRE / '+('RAPID' if game.clock < game.boost_until else 'ON'), 13, mint)
     left, top, width, height = 48, 166, 790, 500
@@ -67,25 +54,25 @@ def draw_galaga(game, camera, session, tracking):
     enemy_sprite = ['..1...1..', '.121.121.', '111111111', '112111211', '..11111..', '.11...11.', '1.......1']
     if game.boss:
         boss = game.boss
-        text(52, 168, 'STAGE 10 / BOSS', 15, '#ff778d')
-        text(663, 168, f"HP {boss['hp']} / {boss['max_hp']}", 15, '#ffd166')
+        text(52, 168, 'STAGE 10 / BOSS', 15, theme.DANGER)
+        text(663, 168, f"HP {boss['hp']} / {boss['max_hp']}", 15, theme.WARNING)
         draw.rounded_rectangle((52, 195, 834, 211), radius=6, fill='#392038')
         hp_width = int(778*max(0, boss['hp'])/boss['max_hp'])
         if hp_width:
-            draw.rounded_rectangle((54, 197, 54+hp_width, 209), radius=5, fill='#ff5577')
+            draw.rounded_rectangle((54, 197, 54+hp_width, 209), radius=5, fill=theme.RECORDING)
         boss_sprite = ['....11.........11....', '...1111.......1111...',
                        '..11111111111111111..', '.1112211111111122111.',
                        '111122111331111221111', '111111113333311111111',
                        '.1111111133311111111.', '..1111..11111..1111..',
                        '..11.....111.....11..']
         sprite(boss['x'], boss['y'], boss_sprite,
-               {'1': '#d566ff', '2': '#fff09a', '3': '#ff5577'}, scale=12)
+               {'1': '#d566ff', '2': '#fff09a', '3': theme.RECORDING}, scale=12)
     for enemy in game.enemies:
-        color = ['#ff778d', '#ffd166', '#a998ff'][enemy['row']]
+        color = [theme.DANGER, theme.WARNING, '#a998ff'][enemy['row']]
         sprite(enemy['x'], enemy['y'], enemy_sprite, {'1': color, '2': '#071229'})
     for bullet in game.bullets:
         x, y = point(bullet['x'], bullet['y'])
-        draw.rectangle((x-2, y-8, x+2, y+3), fill='#65edff')
+        draw.rectangle((x-2, y-8, x+2, y+3), fill=theme.SKY)
     for bullet in game.enemy_bullets:
         x, y = point(bullet['x'], bullet['y'])
         draw.rectangle((x-3, y-3, x+3, y+7), fill='#ff8477')
@@ -99,7 +86,7 @@ def draw_galaga(game, camera, session, tracking):
     elif game.state == 'paused': overlay = ('PAUSED', 'P를 누르면 계속합니다.')
     elif not tracking: overlay = ('카메라 추적 대기', '상반신과 손이 보이면 전투가 이어집니다.')
     if overlay:
-        card((120, 340, 770, 470), '#142139', '#65edc2')
+        card((120, 340, 770, 470), theme.CARD_RAISED, theme.ACCENT)
         text(146, 358, overlay[0], 28, mint)
         wrapped(overlay[1], 146, 409, 600, 17)
 
