@@ -18,6 +18,7 @@ def get_font():
 
 
 def draw_ksl_overlay(frame, lines):
+    from ui import theme  # Late import: theme itself uses get_font().
     image = Image.fromarray(frame[:, :, ::-1])
     draw = ImageDraw.Draw(image)
     font = get_font()
@@ -32,9 +33,9 @@ def draw_ksl_overlay(frame, lines):
         wrapped.append(current)
     wrapped = wrapped[-max(1, (image.height - 160) // 26):]
     y = image.height - len(wrapped) * 26 - 8
-    draw.rectangle((0, y - 4, image.width, image.height), fill=(20, 20, 20))
+    draw.rectangle((0, y - 4, image.width, image.height), fill=theme.BACKGROUND)
     for line in wrapped:
-        draw.text((10, y), line, font=font, fill=(245, 245, 245))
+        draw.text((10, y), line, font=font, fill=theme.TEXT)
         y += 26
     frame[:] = np.asarray(image)[:, :, ::-1]
     return frame
