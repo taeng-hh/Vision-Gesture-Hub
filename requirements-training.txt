@@ -1,3 +1,4 @@
-# Optional; install only on machines used for GRU training/inference.
+# GRU training only (scripts/train_robust_ksl30.py). The app itself only needs
+# requirements.txt, which already includes torch.
 numpy>=1.26,<3
 torch>=2.6,<3
