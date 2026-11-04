@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import time
 import cv2
 import numpy as np
-from core.live_sign import webcam_frame
+from core.sign_language_session import webcam_frame
 from ui.ksl_overlay import get_font
 
 HAND_EDGES=((0,1),(1,2),(2,3),(3,4),(0,5),(5,6),(6,7),(7,8),(5,9),(9,10),(10,11),(11,12),(9,13),(13,14),(14,15),(15,16),(13,17),(17,18),(18,19),(19,20),(0,17))
@@ -34,6 +34,10 @@ def snapshot_from_results(hands,pose,width,height,captured_at):
     fingers=tuple(tuple((float(p.x),float(p.y)) for p in hand) for hand in hs)
     shoulders=bool(pp and min(confidence(pp[11]),confidence(pp[12]))>=.5 and np.linalg.norm(np.array([(pp[11].x-pp[12].x)*width,(pp[11].y-pp[12].y)*height]))>=20)
     frame=webcam_frame(SimpleNamespace(hands=[SimpleNamespace(landmarks=h) for h in hs]),pp,width,height)
+    # The shared adapter keeps shoulders when detected hands cannot be matched to
+    # pose wrists. Live landmark reuse skips such frames instead of recording them
+    # as "no hands" (the behaviour this engine was validated with).
+    if frame is not None and hs and not np.any(frame[:42,2]>0):frame=None
     usable=False
     if frame is not None:
         for hand in (frame[:21],frame[21:42]):

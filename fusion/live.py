@@ -5,7 +5,7 @@ import time
 import cv2
 import numpy as np
 from .preview import PreviewTracker,draw_skeleton,tracking_status,diagnostic_view
-from core.live_sign import MixedLiveSignSession
+from core.sign_language_session import MixedLiveSignSession
 from .shared import FrameClip,SharedExtractor
 from .predict import select_prediction,MODE_LABELS
 from .fast import analyze_clip,needs_mode_analysis

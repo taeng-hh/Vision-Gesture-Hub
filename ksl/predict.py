@@ -17,9 +17,13 @@ class Recognizer:
         self.model=SequenceGRU(len(self.classes),d['hidden']);self.model.load_state_dict(d['state_dict']);self.model.eval()
         self.mean=d['mean'];self.std=d['std'];self.min_score=min_score;self.min_margin=min_margin
 
-    def predict(self,frames):
+    def predict_proba(self,frames):
+        """Full class-order scores for fusion; thresholds remain in predict()."""
         t=self.torch;x=t.tensor(encode(frames));x=(x-self.mean)/self.std
-        with t.no_grad():scores=self.model(x[None]).softmax(dim=1)[0];values,indices=scores.topk(2)
+        with t.no_grad():return self.model(x[None]).softmax(dim=1)[0].numpy()
+
+    def predict(self,frames):
+        scores=self.torch.from_numpy(self.predict_proba(frames));values,indices=scores.topk(2)
         score=float(values[0]);margin=float(values[0]-values[1]);candidate=self.classes[int(indices[0])]
         accepted=score>=self.min_score and margin>=self.min_margin
         return dict(accepted=accepted,class_id=candidate['class_id'] if accepted else None,

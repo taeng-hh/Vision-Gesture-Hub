@@ -4,7 +4,7 @@ from itertools import permutations
 from pathlib import Path
 import math
 from types import SimpleNamespace
-from core.live_sign import webcam_frame
+from core.sign_language_session import webcam_frame
 import cv2
 import numpy as np
 import torch
