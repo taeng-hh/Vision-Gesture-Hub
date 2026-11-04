@@ -1,0 +1,42 @@
+{
+  "format": "rgb-ksl30-ensemble-v1",
+  "checkpoints": [
+    "seed42.pt",
+    "seed73.pt",
+    "seed17.pt"
+  ],
+  "cnn_weights": "mobilenet_v3_small.pth",
+  "class_ids": [
+    "WORD1290",
+    "WORD1201",
+    "WORD1589",
+    "WORD1157",
+    "WORD1351",
+    "WORD1191",
+    "WORD1278",
+    "WORD1096",
+    "WORD1381",
+    "WORD1204",
+    "WORD0115",
+    "WORD1534",
+    "WORD0953",
+    "WORD1169",
+    "WORD0009",
+    "WORD0003",
+    "WORD1577",
+    "WORD1342",
+    "WORD1343",
+    "WORD2100",
+    "WORD2577",
+    "WORD1274",
+    "WORD1135",
+    "SEN0354",
+    "SEN0254",
+    "SEN0156",
+    "SEN0173",
+    "SEN0355",
+    "SEN0155",
+    "SEN0253"
+  ],
+  "selection": "Pre-existing REAL09 validation winner; all three seeds, no REAL10-based selection."
+}
