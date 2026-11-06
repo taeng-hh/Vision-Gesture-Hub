@@ -124,8 +124,8 @@ class GalagaGame:
 RunnerGame = GalagaGame
 
 
-def run_game(camera=0, model=None, pose_model=None, window=None):
-    """window: reuse this open window (the translator's) instead of opening one."""
+def run_game(camera=0, model=None, pose_model=None, window=None, cnn_assisted=False, cnn_folder=None):
+    """Reuse the translator window while keeping optional game assistance."""
     from contextlib import ExitStack
     from pathlib import Path
     import time
@@ -145,7 +145,11 @@ def run_game(camera=0, model=None, pose_model=None, window=None):
         raise FileNotFoundError(f'Required models: {model / "model.pt"}, {pose_model}')
     game = GalagaGame()
 
-    session = AutoGameSession(Recognizer(model), game)
+    from core.game_cnn import GameCnnAssist
+    recognizer=Recognizer(model)
+    folder=Path(cnn_folder) if cnn_folder else root
+    assist=GameCnnAssist(folder,recognizer.classes,enabled=cnn_assisted)
+    session = AutoGameSession(recognizer, game,assist)
     options = mp.tasks.vision.PoseLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_buffer=pose_model.read_bytes()),
         running_mode=mp.tasks.vision.RunningMode.VIDEO, num_poses=1)
@@ -171,7 +175,7 @@ def run_game(camera=0, model=None, pose_model=None, window=None):
                 h, w = raw.shape[:2]
                 skeleton = webcam_frame(observation,
                     body.pose_landmarks[0] if body.pose_landmarks else None, w, h)
-                session.update(skeleton, now)
+                session.update(skeleton, now, rgb=raw)
                 game.update(now - previous, frozen=skeleton is None)
                 previous = now
                 canvas = draw_galaga(game, raw, session, skeleton is not None)
@@ -179,7 +183,11 @@ def run_game(camera=0, model=None, pose_model=None, window=None):
                 key = cv2.waitKey(1) & 0xff
                 if key in (ord('q'), ord('Q'), 27): break
                 if cv2.getWindowProperty(title, cv2.WND_PROP_VISIBLE) < 1: break
-                if key == ord('r'):
+                if key in (ord('b'),ord('B'),ord('c'),ord('C')):
+                    assist.set_enabled(key in (ord('c'),ord('C')))
+                    session.cancel_recording()
+                    session.status=assist.status
+                elif key == ord('r'):
                     game.reset()
                     session.cancel_recording()
                 elif key == ord('p'):
@@ -191,6 +199,7 @@ def run_game(camera=0, model=None, pose_model=None, window=None):
                               ord('w'): 'up', ord('s'): 'down', ord('f'): 'accelerate'}.get(key)
                     if action: game.action(action)
     finally:
+        assist.close()
         if cap is not None: cap.release()
         if window is None:
             try: cv2.destroyWindow(title)
@@ -203,5 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--camera', type=int, default=0)
     parser.add_argument('--model')
     parser.add_argument('--pose-model')
+    parser.add_argument('--cnn-assisted',action='store_true')
+    parser.add_argument('--cnn-folder')
     args = parser.parse_args()
-    run_game(args.camera, args.model, args.pose_model)
+    run_game(args.camera, args.model, args.pose_model,cnn_assisted=args.cnn_assisted,cnn_folder=args.cnn_folder)

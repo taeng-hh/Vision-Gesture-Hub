@@ -17,7 +17,8 @@ def webcam_frame(observation, pose, width, height):
 
     Match hand detections to anatomical pose wrists, not recognizer list order
     or mirror-dependent handedness labels. Z never becomes confidence.
-    Returns None on missing shoulders or ambiguous wrist association.
+    Returns None on missing shoulders. Ambiguous wrists preserve the body
+    with zero-confidence hands so sessions can skip the observation safely.
     """
     if pose is None or len(pose) != 33:
         return None

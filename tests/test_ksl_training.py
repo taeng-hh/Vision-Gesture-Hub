@@ -53,6 +53,15 @@ class PublishedModelTest(unittest.TestCase):
         event=model.predict(a)
         self.assertTrue(np.isfinite(event['score']))
         self.assertIn(event['candidate_id'],{c['class_id'] for c in model.classes})
+        comparison=model.compare_windows([a,a])
+        self.assertEqual(len(comparison),2)
+        for pair in comparison:
+            self.assertEqual(pair['normal']['candidate_id'],event['candidate_id'])
+            self.assertAlmostEqual(pair['normal']['score'],event['score'],places=5)
+            game=model.predict_game(a)
+            self.assertEqual(pair['game']['candidate_id'],game['candidate_id'])
+            self.assertAlmostEqual(pair['game']['global_score'],game['global_score'],places=5)
+
 
 
 if __name__=='__main__':unittest.main()

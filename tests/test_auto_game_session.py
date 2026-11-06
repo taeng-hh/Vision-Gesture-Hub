@@ -74,6 +74,95 @@ class TestAutoGameSession(unittest.TestCase):
         self.assertAlmostEqual(self.game.clock, 1.)
         self.assertTrue(self.game.bullets)
 
+    def test_game_scope_is_used_when_available(self):
+        calls=[]
+        def predict_game(frames):
+            calls.append(1)
+            return dict(class_id='LEFT',accepted=True,score=.95)
+        self.model.predict_game=predict_game
+        self.feed(0)
+        self.assertTrue(calls)
+        self.assertEqual(self.model.calls,0)
+        self.assertAlmostEqual(self.game.x,.38)
+
+    def test_multiscale_prefers_supported_window_and_compares_same_input(self):
+        batches=[]
+        def compare_windows(clips):
+            batches.append([c.copy() for c in clips])
+            pairs=[]
+            for i,c in enumerate(clips):
+                strength=.8+i*.02
+                event=dict(class_id='LEFT',candidate_id='LEFT',accepted=True,score=.96,global_score=strength)
+                pairs.append(dict(normal=dict(event),game=dict(event)))
+            return pairs
+        self.model.compare_windows=compare_windows
+        self.feed(0,20)
+        self.assertTrue(batches)
+        self.assertTrue(all(c.shape==(32,67,3) for b in batches for c in b))
+        self.assertAlmostEqual(self.game.x,.38)
+        self.assertEqual(self.session.last_comparison['normal']['candidate_id'],'LEFT')
+        self.assertIn('실행',self.session.status)
+
+    def test_multiscale_rejected_windows_do_not_trigger_action(self):
+        def compare_windows(clips):
+            event=dict(class_id=None,candidate_id='LEFT',accepted=False,score=.90,global_score=.05)
+            return [dict(normal=dict(event),game=dict(event)) for c in clips]
+        self.model.compare_windows=compare_windows
+        self.feed(0,20)
+        self.assertAlmostEqual(self.game.x,.5)
+        self.assertIn('보류',self.session.status)
+
+    def test_short_partial_prediction_waits_for_context(self):
+        def compare_windows(clips):
+            event=dict(class_id='LEFT',candidate_id='LEFT',accepted=True,score=.96,global_score=.96,margin=.8)
+            return [dict(normal=dict(event),game=dict(event)) for c in clips]
+        self.model.compare_windows=compare_windows
+        self.feed(0,12)
+        self.assertAlmostEqual(self.game.x,.5)
+        self.assertIn('문맥 대기',self.session.status)
+        self.feed(1.2,4)
+        self.assertAlmostEqual(self.game.x,.38)
+
+    def test_full_and_game_very_high_agreement_executes_without_second_hit(self):
+        def compare_windows(clips):
+            event=dict(class_id='LEFT',candidate_id='LEFT',accepted=True,score=.999,global_score=.999,margin=.99)
+            return [dict(normal=dict(event),game=dict(event)) for c in clips]
+        self.model.compare_windows=compare_windows
+        self.feed(0,6)
+        self.assertAlmostEqual(self.game.x,.38)
+
+    def test_prediction_schedule_does_not_drift_at_30fps(self):
+        times=[]
+        def reject(frames):
+            times.append(self.session.last_predict)
+            return dict(class_id=None,accepted=False,score=.1)
+        self.model.predict=reject
+        for i in range(42):self.session.update(self.frame,i/30)
+        np.testing.assert_allclose(times,[.5,.7,.9,1.1,1.3],atol=1e-6)
+
+    def test_async_pending_preserves_but_does_not_increment_confirmation(self):
+        class Assist:
+            enabled=True
+            pending=object()
+            calls=0
+            def invalidate(self):self.pending=None
+            def evaluate(self,pair,samples,now,window_seconds):
+                self.calls+=1;self.pending=object()
+                if self.calls%2==1:
+                    pair=dict(pair);pair['game']=dict(pair['game'],class_id='LEFT',accepted=True)
+                return pair
+        assist=Assist();self.session=AutoGameSession(self.model,self.game,assist)
+        def compare_windows(clips):
+            normal=dict(class_id=None,candidate_id='LEFT',accepted=False,score=.5,global_score=.5,margin=.2)
+            game=dict(normal,scope='game')
+            return [dict(normal=dict(normal),game=dict(game)) for c in clips]
+        self.model.compare_windows=compare_windows
+        self.feed(0,6)
+        self.assertEqual(self.session.matches,1)
+        self.feed(.6,2)
+        self.assertEqual(self.session.matches,1)
+        self.feed(.8,8)
+        self.assertAlmostEqual(self.game.x,.38)
 
 if __name__ == '__main__':
     unittest.main()

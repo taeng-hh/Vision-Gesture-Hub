@@ -34,12 +34,12 @@ class LiveTests(unittest.TestCase):
 
     def test_missing_pose_and_ambiguous_hands(self):
         self.assertIsNone(webcam_frame(Observation(), None, 640, 480))
-        # Ambiguous wrist matching keeps the shoulders but never assigns a hand.
         hand = Hand(tuple(Landmark(.5, .5, 0) for _ in range(21)))
-        f = webcam_frame(Observation((hand,)), pose_points(), 640, 480)
-        self.assertIsNotNone(f)
-        self.assertFalse(f[:42, 2].any())
-        self.assertTrue((f[[44, 47], 2] >= .5).all())
+        frame = webcam_frame(Observation((hand,)), pose_points(), 640, 480)
+        self.assertIsNotNone(frame)
+        np.testing.assert_array_equal(frame[:42], 0)
+        self.assertTrue(np.all(frame[[44, 47], 2] >= .5))
+        self.assertAlmostEqual(frame[47, 0], 448)
 
     def record(self, session, start):
         session.handle_key(ord(' '), start)
@@ -82,8 +82,6 @@ class LiveTests(unittest.TestCase):
         session.update(empty, 1)
         self.assertEqual(session.tokens, ['I'])
 
-
-if __name__ == '__main__': unittest.main()
 
 
 class MixedTests(LiveTests):
@@ -138,9 +136,10 @@ class MixedInputRecoveryTests(MixedTests):
 
     def test_long_tracking_gap_cancels(self):
         s=self.session([]);s.start(0);s.update(self.frame(),.1)
-        s.update(None,.2);s.update(None,.85)
-        self.assertTrue(s.recording)  # Within max_tracking_gap (0.9 s).
-        s.update(None,1.15)
+        s.update(None,.2)
+        s.update(None,.2 + s.max_tracking_gap - .01)
+        self.assertTrue(s.recording)
+        s.update(None,.2 + s.max_tracking_gap + .01)
         self.assertFalse(s.recording)
         self.assertEqual(s.tokens,[])
 
@@ -155,7 +154,52 @@ class MixedInputRecoveryTests(MixedTests):
         s=self.session([]);s.start(0)
         for i,t in enumerate([0,.1,.2,.6]):
             f=self.frame();f[0,0]=100+t*100;s.update(f,t)
-        sampled=s.timed_frames()
-        self.assertEqual(sampled.shape,(s.sample_frames,67,3))
-        expected=100+np.linspace(0,.6,s.sample_frames)*100
-        np.testing.assert_allclose(sampled[:,0,0],expected,atol=1e-3)
+        samples=s.timed_frames()
+        self.assertEqual(samples.shape,(s.sample_frames,67,3))
+        expected=100 + np.linspace(0,.6,s.sample_frames)*100
+        np.testing.assert_allclose(samples[:,0,0],expected,atol=1e-4)
+        np.testing.assert_array_equal(samples[:,:,2],np.repeat(self.frame()[None,:,2],s.sample_frames,axis=0))
+
+
+class SamplingValidityTests(MixedTests):
+    def test_missing_hand_masks_are_not_interpolated(self):
+        s=self.session([]);s.start(0)
+        for i in range(8):
+            f=self.frame()
+            if i>=4:f[:21]=0
+            s.update(f,i*.1)
+        samples=s.timed_frames()
+        self.assertEqual(samples.shape,(32,67,3))
+        self.assertTrue(np.isin(samples[:,:,2],[0,1]).all())
+        self.assertTrue(np.any(samples[:,:21,2]==0))
+        np.testing.assert_array_equal(samples[:,:21,:2][samples[:,:21,2]==0],0)
+        np.testing.assert_array_equal(samples[:,21:42,2],1)
+
+    def test_missing_hands_are_skipped_and_do_not_finish(self):
+        s=self.session([]);s.start(0)
+        for i in range(8):s.update(self.frame(),i*.05)
+        count=len(s.frames)
+        no_hands=self.frame();no_hands[:42]=0
+        s.update(no_hands,.4);s.update(no_hands,.8)
+        self.assertTrue(s.recording)
+        self.assertEqual(len(s.frames),count)
+        self.assertEqual(s.skipped_no_hand,2)
+
+    def test_duplicate_timestamp_is_skipped(self):
+        s=self.session([]);s.start(0)
+        for i in range(8):s.update(self.frame(),i*.1)
+        s.update(self.frame(),s.last_time)
+        self.assertEqual(len(s.frames),8)
+        self.assertEqual(s.timed_frames().shape,(32,67,3))
+
+    def test_invalid_coordinates_follow_pose_loss_recovery(self):
+        s=self.session([]);s.start(0);s.update(self.frame(),.1)
+        f=self.frame();f[0,0]=np.nan
+        s.update(f,.2)
+        self.assertTrue(s.recording)
+        self.assertEqual(s.skipped_no_pose,1)
+        self.assertEqual(len(s.frames),1)
+        s.update(f,.2+s.max_tracking_gap+.01)
+        self.assertFalse(s.recording)
+
+if __name__ == '__main__': unittest.main()
